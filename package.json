@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon ./src/server.js"
+    "start": "nodemon ./src/server.js",
+    "migrate": "node-pg-migrate"
   },
   "author": "",
   "license": "ISC",
@@ -13,6 +14,7 @@
     "dotenv": "^10.0.0",
     "fastify": "^3.22.0",
     "fastify-auth": "^1.1.0",
+    "fastify-cors": "^6.0.2",
     "fastify-jwt": "^3.1.0",
     "fastify-plugin": "^3.0.0",
     "fastify-postgres": "^3.6.0",

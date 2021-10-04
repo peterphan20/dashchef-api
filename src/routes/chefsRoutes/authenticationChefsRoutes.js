@@ -25,7 +25,7 @@ module.exports = async function authenticateChefs(fastify) {
 		const { email, password } = request.body;
 
 		if (!email) {
-			return { code: 400, message: "Invalid email or password provided." };
+			return { code: 400, message: "Invalid email or password provided, please try again!" };
 		}
 
 		const client = await fastify.pg.connect();
@@ -41,6 +41,6 @@ module.exports = async function authenticateChefs(fastify) {
 			});
 			return { code: 200, message: "Successfully logged in!", chefID: rows[0].id, token };
 		}
-		return { code: 400, message: "Incorrect credentials, please try again!" };
+		return { code: 400, message: "Invalid email or password provided, please try again!" };
 	});
 };

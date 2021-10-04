@@ -1,3 +1,4 @@
+const bcrypt = require("bcrypt");
 const usersRequireAuthentication = require("../../plugins/usersAuthenticator");
 
 module.exports = async function usersAuthRoutes(fastify) {
@@ -7,9 +8,7 @@ module.exports = async function usersAuthRoutes(fastify) {
 		fastify.route({
 			method: "GET",
 			url: "/users/:id",
-			preHandler: fastify.auth([fastify.verifyJWT], {
-				relation: "and",
-			}),
+			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();
@@ -25,16 +24,16 @@ module.exports = async function usersAuthRoutes(fastify) {
 		fastify.route({
 			method: "PUT",
 			url: "/users/:id",
-			preHandler: fastify.auth([fastify.verifyJWT], {
-				relation: "and",
-			}),
+			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { firstName, lastName, email, password, address, phone, avatarURL } = request.body;
 				const { id } = request.params;
+				const hash = await bcrypt.hash(password, 10);
+				console.log("hashed password", hash);
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
 					"UPDATE users SET first_name=$1, last_name=$2, email=$3, password=$4, address=$5, phone=$6, avatar_url=$7 WHERE id=$8 RETURNING *;",
-					[firstName, lastName, email, password, address, phone, avatarURL, id]
+					[firstName, lastName, email, hash, address, phone, avatarURL, id]
 				);
 				client.release();
 				return { code: 200, message: `Sucessfully updated user with id ${id}.`, rows };
@@ -44,9 +43,7 @@ module.exports = async function usersAuthRoutes(fastify) {
 		fastify.route({
 			method: "DELETE",
 			url: "/users/:id",
-			preHandler: fastify.auth([fastify.verifyJWT], {
-				relation: "and",
-			}),
+			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();

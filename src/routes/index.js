@@ -5,6 +5,7 @@ const authenticateUsers = require("./userRoutes/authenticationUsersRoutes");
 const chefsRoutes = require("./chefsRoutes/chefsRoutes");
 const chefsAuthRoutes = require("./chefsRoutes/chefsAuthRoutes");
 const authenticateChefs = require("./chefsRoutes/authenticationChefsRoutes");
+const kitchensAuthRoutes = require("./kitchenRoutes/kitchensAuthRoutes");
 
 module.exports = async function routes(fastify) {
 	fastify.register(serverRoute);
@@ -14,4 +15,5 @@ module.exports = async function routes(fastify) {
 	fastify.register(chefsRoutes);
 	fastify.register(chefsAuthRoutes);
 	fastify.register(authenticateChefs);
+	fastify.register(kitchensAuthRoutes);
 };

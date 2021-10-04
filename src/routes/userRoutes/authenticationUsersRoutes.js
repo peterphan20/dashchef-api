@@ -1,8 +1,8 @@
 const bcrypt = require("bcrypt");
 
 module.exports = async function authenticateUsers(fastify) {
-	fastify.post("/auth/create-user", async (request, reply) => {
-		const { firstName, lastName, email, password, address, phone } = request.body;
+	fastify.post("/auth/user-create", async (request, reply) => {
+		const { firstName, lastName, email, password, address, phone, avatarURL } = request.body;
 
 		if (!firstName || !lastName || !email || !password || !address || !phone) {
 			return { code: 400, message: "Missing values, please check input fields." };
@@ -11,8 +11,8 @@ module.exports = async function authenticateUsers(fastify) {
 		const hash = await bcrypt.hash(password, 10);
 		const client = await fastify.pg.connect();
 		await client.query(
-			"INSERT INTO users (first_name, last_name, email, password, address, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
-			[firstName, lastName, email, hash, address, phone]
+			"INSERT INTO users (first_name, last_name, email, password, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
+			[firstName, lastName, email, hash, address, phone, avatarURL]
 		);
 		client.release();
 		return {
@@ -21,7 +21,7 @@ module.exports = async function authenticateUsers(fastify) {
 		};
 	});
 
-	fastify.post("/auth/login-user", async (request, reply) => {
+	fastify.post("/auth/user-login", async (request, reply) => {
 		const { email, password } = request.body;
 
 		if (!email) {

@@ -16,6 +16,15 @@ exports.up = (pgm) => {
       last_seen_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       avatar_url VARCHAR(240) 
     );
+    CREATE TABLE kitchens(
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(120) NOT NULL,
+      email VARCHAR(60) NOT NULL,
+      address VARCHAR(240) NOT NULL,
+      phone VARCHAR(15) NOT NULL,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      avatar_url VARCHAR(240)
+    );
     CREATE TABLE chefs(
       id SERIAL PRIMARY KEY,
       first_name VARCHAR(40) NOT NULL,
@@ -26,19 +35,10 @@ exports.up = (pgm) => {
       phone VARCHAR(15) NOT NULL, 
       signup_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       last_seen_date TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      kitchen_id INTEGER REFERENCES kitchen(id) 
+      kitchen_id INTEGER REFERENCES kitchens(id) 
         ON DELETE SET NULL,
       avatar_url VARCHAR(240)  
-    )
-    CREATE TABLE kitchens(
-      id SERIAL PRIMARY KEY,
-      name VARCHAR(120) NOT NULL,
-      email VARCHAR(60) NOT NULL,
-      address VARCHAR(240) NOT NULL,
-      phone VARCHAR(15) NOT NULL,
-      create_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      avatar_url VARCHAR(240)
-    )
+    );
     CREATE TABLE menu_items(
       id SERIAL PRIMARY KEY,
       kitchen_id INTEGER REFERENCES kitchens(id) ON DELETE SET NULL,
@@ -48,29 +48,29 @@ exports.up = (pgm) => {
       photo_primary_url VARCHAR(240),
       gallery_photo_urls VARCHAR(240)[],
       tags VARCHAR(40)[]
-    )
+    );
     CREATE TABLE orders(
       id SERIAL PRIMARY KEY,
       menu_item_id INTEGER REFERENCES menu_items(id) ON DELETE SET NULL,
       kitchen_id INTEGER REFERENCES kitchens(id) ON DELETE SET NULL,
       users_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      status INTEGER DEFAULT 0
+      status INTEGER DEFAULT 0,
       date_created TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       date_fulfilled TIMESTAMP WITH TIME ZONE
-    )
+    );
     CREATE TABLE order_status(
       id SERIAL PRIMARY KEY,
       identifier INTEGER UNIQUE,
       meaning VARCHAR(40) UNIQUE
-    )
+    );
     CREATE TABLE posts(
       id SERIAL PRIMARY KEY,
       title VARCHAR(120) NOT NULL,
       content VARCHAR(1000) NOT NULL,
       tags VARCHAR(40)[],
-      create_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+      created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       image_url VARCHAR(240)
-    )
+    );
     CREATE TABLE comments(
       id SERIAL PRIMARY KEY,
       post_id INTEGER REFERENCES posts(id),
@@ -79,17 +79,17 @@ exports.up = (pgm) => {
       author_type VARCHAR(20) NOT NULL,
       content VARCHAR(500) NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-    )
+    );
     CREATE TABLE users_post_ref(
       id SERIAL PRIMARY KEY,
       user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
-    )
+      post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL
+    );
     CREATE TABLE kitchens_post_ref(
       id SERIAL PRIMARY KEY,
       kitchen_id INTEGER REFERENCES kitchens(id) ON DELETE SET NULL,
-      post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
-    )
+      post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL
+    );
   `);
 };
 
@@ -102,8 +102,8 @@ exports.down = (pgm) => {
     DROP TABLE order_status;
     DROP TABLE orders;
     DROP TABLE menu_items;
-    DROP TABLE kitchens;
     DROP TABLE chefs;
+    DROP TABLE kitchens;
     DROP TABLE users;
   `);
 };

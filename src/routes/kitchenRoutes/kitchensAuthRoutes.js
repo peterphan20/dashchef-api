@@ -11,14 +11,13 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 
 		jwt.verify(request.raw.headers.auth, async (err, decoded) => {
 			try {
-				const { email } = decoded;
-				const { id } = request.params;
+				const { id } = decoded;
+				const kitchen = request.params;
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
 					`
           SELECT 
             c.id,
-            c.email,
             c.kitchen_id,
             k.id,
             CASE 
@@ -26,10 +25,10 @@ module.exports = async function kitchensAuthRoutes(fastify) {
               ELSE false
             END AS "userOwnKitchen"
             FROM kitchens k
-            LEFT JOIN chefs c on c.email = $1
+            LEFT JOIN chefs c on c.id = $1
             WHERE k.id = $2;
         `,
-					[email, id]
+					[kitchen.id, id]
 				);
 				client.release();
 				if (rows[0].userOwnKitchen) {
@@ -49,15 +48,28 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			url: "/kitchens/kitchen-create",
 			handler: async (request) => {
 				const { name, email, address, phone, avatarURL } = request.body;
+				const chef = fastify.jwt.decode(request.raw.headers.auth);
 				const client = await fastify.pg.connect();
-				const { rows } = await client.query(
-					"INSERT INTO kitchens (name, email, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
+				const newKitchen = await client.query(
+					`
+					INSERT INTO kitchens (name, email, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;
+					`,
 					[name, email, address, phone, avatarURL]
 				);
+				const { rows } = await client.query("UPDATE chefs SET kitchen_id=$1 WHERE id=$2", [
+					newKitchen.rows[0].id,
+					chef.id,
+				]);
 				client.release();
-				return { code: 201, message: "Kitchen successfully created!", rows };
+				return {
+					code: 201,
+					message: "Kitchen successfully created!",
+					newKitchen: newKitchen.rows,
+					rows,
+				};
 			},
 		});
+
 		fastify.route({
 			method: "DELETE",
 			url: "/kitchens/:id",
@@ -67,7 +79,24 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 				const client = await fastify.pg.connect();
 				await client.query("DELETE FROM kitchens WHERE id=$1 RETURNING *;", [id]);
 				client.release();
-				return { code: 200, message: "This kitchen has been deleted" };
+				return { code: 200, message: `Kitchen with id ${id} has been deleted` };
+			},
+		});
+
+		fastify.route({
+			method: "PUT",
+			url: "/kitchens/:id",
+			preHandler: fastify.auth([fastify.verifyJWT]),
+			handler: async (request) => {
+				const { name, email, address, phone, avatarURL } = request.body;
+				const { id } = request.params;
+				const client = await fastify.pg.connect();
+				const { rows } = await client.query(
+					"UPDATE kitchens SET name=$1, email=$2, address=$3, phone=$4, avatar_url=$5 WHERE id=$6 RETURNING *;",
+					[name, email, address, phone, avatarURL, id]
+				);
+				client.release();
+				return { code: 200, message: `Kitchen with id ${id} has been updated`, rows };
 			},
 		});
 	});

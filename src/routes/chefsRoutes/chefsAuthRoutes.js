@@ -46,9 +46,9 @@ module.exports = async function chefsAuthRoutes(fastify) {
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();
-				await client.query("DELETE FROM chefs WHERE id=$1 RETURNING *;", [id]);
+				const { rows } = await client.query("DELETE FROM chefs WHERE id=$1 RETURNING *;", [id]);
 				client.release();
-				return { code: 200, message: `Chef with id ${id} has been deleted.` };
+				return { code: 200, message: `Chef with id ${id} has been deleted.`, rows };
 			},
 		});
 	});

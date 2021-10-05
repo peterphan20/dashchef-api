@@ -29,7 +29,6 @@ module.exports = async function usersAuthRoutes(fastify) {
 				const { firstName, lastName, email, password, address, phone, avatarURL } = request.body;
 				const { id } = request.params;
 				const hash = await bcrypt.hash(password, 10);
-				console.log("hashed password", hash);
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
 					"UPDATE users SET first_name=$1, last_name=$2, email=$3, password=$4, address=$5, phone=$6, avatar_url=$7 WHERE id=$8 RETURNING *;",
@@ -47,9 +46,9 @@ module.exports = async function usersAuthRoutes(fastify) {
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();
-				await client.query("DELETE FROM users WHERE id=$1 RETURNING *;", [id]);
+				const { rows } = await client.query("DELETE FROM users WHERE id=$1 RETURNING *;", [id]);
 				client.release();
-				return { code: 200, message: `User with id ${id} has been deleted.` };
+				return { code: 200, message: `User with id ${id} has been deleted.`, rows };
 			},
 		});
 	});

@@ -28,12 +28,7 @@ Move into repository
 
 Install dependencies
 
-Setup local Docker DB
-
-`docker build -t my-postgres-db ./config`
-
-`docker run -d --name my-postgres-container -p 5432:5432 my-postgres-db`
-
+`npm install`
 
 ## Usage
 

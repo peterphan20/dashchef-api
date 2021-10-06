@@ -1,6 +1,6 @@
 const chefsRequireAuthentication = require("../../plugins/chefsAuthenticator");
 
-module.exports = async function kitchensAuthRoutes(fastify) {
+module.exports = async function menuItemsAuthRoutes(fastify) {
 	fastify.register(chefsRequireAuthentication);
 	fastify.decorate("verifyOwnership", async (request, reply) => {
 		const { jwt } = fastify;
@@ -12,26 +12,27 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		jwt.verify(request.raw.headers.auth, async (err, decoded) => {
 			try {
 				const { id } = decoded;
-				const kitchen = request.params;
+				const menu = request.params;
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
 					`
           SELECT 
             c.id,
-            c.kitchen_id,
-            k.id,
+            c.kitchen_id 
+            m.id,
+            m.kitchen_id,
             CASE 
-              WHEN k.id = c.kitchen_id THEN true
+              WHEN m.kitchen_id = c.kitchen_id THEN true
               ELSE false
-            END AS "chefOwnKitchen"
-            FROM kitchens k
+            END AS "chefOwnMenuItem"
+            FROM menu_items m
             LEFT JOIN chefs c ON c.id = $1
-            WHERE k.id = $2;
+            WHERE m.id = $2
         `,
-					[id, kitchen.id]
+					[id, menu.id]
 				);
 				client.release();
-				if (rows[0].chefOwnKitchen) {
+				if (rows[0].chefOwnMenuItem) {
 					return done();
 				}
 				return done(new Error("User does not own this kitchen"));
@@ -45,27 +46,30 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 	fastify.after(() => {
 		fastify.route({
 			method: "POST",
-			url: "/kitchens/kitchen-create",
+			url: "/kitchen/menu/create-item",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
-				const { name, email, address, phone, avatarURL } = request.body;
-				const chef = fastify.jwt.decode(request.raw.headers.auth);
+				const { name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags } =
+					request.body;
 				const client = await fastify.pg.connect();
-				const newKitchen = await client.query(
+				const { rows } = await client.query(
 					`
-					INSERT INTO kitchens (name, email, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;
+					INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) 
+					RETURNING 
+						name,
+						kitchen_id AS "kitchenID",
+						description, 
+						price, 
+						photo_primary_url as "primaryPhoto", 
+						gallery_photo_urls as "galleryPhoto",
+						tags;
 					`,
-					[name, email, address, phone, avatarURL]
+					[name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags]
 				);
-				const { rows } = await client.query("UPDATE chefs SET kitchen_id=$1 WHERE id=$2", [
-					newKitchen.rows[0].id,
-					chef.id,
-				]);
 				client.release();
 				return {
 					code: 201,
-					message: "Kitchen successfully created!",
-					newKitchen: newKitchen.rows,
+					message: "Menu item successfully created!",
 					rows,
 				};
 			},
@@ -73,31 +77,31 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/kitchens/:id",
+			url: "/kitchens/menu/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership]),
 			handler: async (request) => {
-				const { name, email, address, phone, avatarURL } = request.body;
+				const { name, description, price, photoPrimaryURL, galleryPhotoURL, tags } = request.body;
 				const { id } = request.params;
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
-					"UPDATE kitchens SET name=$1, email=$2, address=$3, phone=$4, avatar_url=$5 WHERE id=$6 RETURNING *;",
-					[name, email, address, phone, avatarURL, id]
+					"UPDATE kitchens SET name=$1, description=$2, price=$3, photo_primary_url=$4, gallery_photo_urls=$5, tags=$6 WHERE id=$7 RETURNING *;",
+					[name, description, price, photoPrimaryURL, galleryPhotoURL, tags, id]
 				);
 				client.release();
-				return { code: 200, message: `Kitchen with id ${id} has been updated`, rows };
+				return { code: 200, message: `Menu iteem with id ${id} has been updated`, rows };
 			},
 		});
 
 		fastify.route({
 			method: "DELETE",
-			url: "/kitchens/:id",
+			url: "/kitchens/menu/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership]),
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();
-				await client.query("DELETE FROM kitchens WHERE id=$1 RETURNING *;", [id]);
+				await client.query("DELETE FROM menu_items WHERE id=$1 RETURNING *;", [id]);
 				client.release();
-				return { code: 200, message: `Kitchen with id ${id} has been deleted` };
+				return { code: 200, message: `Menu item with id ${id} has been deleted` };
 			},
 		});
 	});

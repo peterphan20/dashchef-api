@@ -8,6 +8,9 @@ const authenticateChefs = require("./chefsRoutes/authenticationChefsRoutes");
 const kitchensRoutes = require("./kitchenRoutes/kitchensRoutes");
 const kitchensAuthRoutes = require("./kitchenRoutes/kitchensAuthRoutes");
 const postsRoutes = require("./postRoutes/postsRoutes");
+const postsUsersAuthRoutes = require("./postRoutes/postsUsersAuthRoutes");
+const menuItemsRoutes = require("./menuItemsRoutes/menuItemsRoutes");
+const menuItemsAuthRoutes = require("./menuItemsRoutes/menuItemsAuthRoutes");
 
 module.exports = async function routes(fastify) {
 	fastify.register(serverRoute);
@@ -20,4 +23,7 @@ module.exports = async function routes(fastify) {
 	fastify.register(kitchensRoutes);
 	fastify.register(kitchensAuthRoutes);
 	fastify.register(postsRoutes);
+	fastify.register(postsUsersAuthRoutes);
+	fastify.register(menuItemsRoutes);
+	fastify.register(menuItemsAuthRoutes);
 };

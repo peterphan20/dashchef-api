@@ -12,7 +12,7 @@ module.exports = async function kitchensRoutes(fastify) {
 		const { id } = request.params;
 		const client = await fastify.pg.connect();
 		const { rows } = await client.query(
-			"SELECT name, email, address, phone, avatar_url, created_at FROM kitchens where id = $1",
+			"SELECT name, email, address, phone, avatar_url, created_at FROM kitchens WHERE id = $1",
 			[id]
 		);
 		client.release();

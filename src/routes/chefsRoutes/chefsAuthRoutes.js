@@ -23,7 +23,7 @@ module.exports = async function chefsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/chefs/update-chef/:id",
+			url: "/chefs/chef-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { firstname, lastname, email, password, address, phone, avatarURL } = request.body;
@@ -41,7 +41,7 @@ module.exports = async function chefsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "DELETE",
-			url: "/chefs/delete-chef/:id",
+			url: "/chefs/chef-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { id } = request.params;

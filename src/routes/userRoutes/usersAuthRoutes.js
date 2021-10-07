@@ -23,7 +23,7 @@ module.exports = async function usersAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/users/update-user/:id",
+			url: "/users/user-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { firstname, lastname, email, password, address, phone, avatarURL } = request.body;
@@ -41,7 +41,7 @@ module.exports = async function usersAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "DELETE",
-			url: "/users/delete-user/:id",
+			url: "/users/user-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
 				const { id } = request.params;

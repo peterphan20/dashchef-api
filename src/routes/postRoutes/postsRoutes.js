@@ -32,6 +32,9 @@ module.exports = async function postsRoutes(fastify) {
 					),
 					'commentAuthorLastname', (
 						SELECT last_name FROM users WHERE users.id = comm.author_user_id
+					),
+					'commentKitchenName', (
+						SELECT name FROM kitchens WHERE kitchens.id = comm.author_kitchen_id
 					)
 				) ORDER BY comm.created_at ASC) AS comments
 				FROM posts p

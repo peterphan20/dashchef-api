@@ -8,7 +8,7 @@ exports.up = (pgm) => {
       id SERIAL PRIMARY KEY,
       first_name VARCHAR(40) NOT NULL,
       last_name VARCHAR(40) NOT NULL,
-      email VARCHAR(60) NOT NULL,
+      email VARCHAR(60) UNIQUE NOT NULL,
       password VARCHAR(200) NOT NULL,
       address VARCHAR(240) NOT NULL,
       phone VARCHAR(15) NOT NULL, 
@@ -18,8 +18,8 @@ exports.up = (pgm) => {
     );
     CREATE TABLE kitchens(
       id SERIAL PRIMARY KEY,
-      name VARCHAR(120) NOT NULL,
-      email VARCHAR(60) NOT NULL,
+      name VARCHAR(120) UNIQUE NOT NULL,
+      email VARCHAR(60) UNIQUE NOT NULL,
       address VARCHAR(240) NOT NULL,
       phone VARCHAR(15) NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -29,7 +29,7 @@ exports.up = (pgm) => {
       id SERIAL PRIMARY KEY,
       first_name VARCHAR(40) NOT NULL,
       last_name VARCHAR(40) NOT NULL,
-      email VARCHAR(60) NOT NULL,
+      email VARCHAR(60) UNIQUE NOT NULL,
       password VARCHAR(200) NOT NULL,
       address VARCHAR(240) NOT NULL,
       phone VARCHAR(15) NOT NULL, 
@@ -74,7 +74,7 @@ exports.up = (pgm) => {
     );
     CREATE TABLE comments(
       id SERIAL PRIMARY KEY,
-      post_id INTEGER REFERENCES posts(id),
+      post_id INTEGER REFERENCES posts(id) ON DELETE SET NULL,
       author_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
       author_kitchen_id INTEGER REFERENCES kitchens(id) ON DELETE SET NULL,
       author_type VARCHAR(20) NOT NULL,

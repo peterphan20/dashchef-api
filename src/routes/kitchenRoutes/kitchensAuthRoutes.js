@@ -70,7 +70,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/kitchens/:id",
+			url: "/kitchens/kitchen-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
 				run: "all",
 				relation: "and",
@@ -90,7 +90,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "DELETE",
-			url: "/kitchens/:id",
+			url: "/kitchens/kitchen-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
 				run: "all",
 				relation: "and",

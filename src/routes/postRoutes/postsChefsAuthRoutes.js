@@ -60,7 +60,7 @@ module.exports = async function postsChefsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/posts/update-post/:id",
+			url: "/posts/post-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
 				run: "all",
 				relation: "and",
@@ -80,7 +80,7 @@ module.exports = async function postsChefsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "DELETE",
-			url: "/posts/delete-post/:id",
+			url: "/posts/post-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
 				run: "all",
 				relation: "and",

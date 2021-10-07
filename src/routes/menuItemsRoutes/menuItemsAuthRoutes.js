@@ -6,41 +6,40 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 		const { jwt } = fastify;
 
 		if (!request.raw.headers.auth) {
-			return done(new Error("Missing token header"));
+			return new Error("Missing token header");
 		}
 
-		jwt.verify(request.raw.headers.auth, async (err, decoded) => {
-			try {
-				const { id } = decoded;
-				const menu = request.params;
-				const client = await fastify.pg.connect();
-				const { rows } = await client.query(
-					`
-          SELECT 
-            c.id,
-            c.kitchen_id 
-            m.id,
-            m.kitchen_id,
-            CASE 
-              WHEN m.kitchen_id = c.kitchen_id THEN true
-              ELSE false
-            END AS "chefOwnMenuItem"
-            FROM menu_items m
-            LEFT JOIN chefs c ON c.id = $1
-            WHERE m.id = $2
-        `,
-					[id, menu.id]
-				);
-				client.release();
-				if (!rows[0].chefOwnMenuItem) {
-					return done(new Error("User does not own this kitchen"));
-				}
-				return done();
-			} catch (error) {
-				console.error(error);
-				return done(new Error(error));
-			}
-		});
+		const decodedToken = jwt.decode(request.raw.headers.auth);
+		const { id, email, password } = decodedToken;
+
+		if (!id || !email || !password) {
+			return new Error("Token not valid");
+		}
+		const menu = request.params;
+		const client = await fastify.pg.connect();
+		const { rows } = await client.query(
+			`
+			SELECT 
+				c.id,
+				c.kitchen_id 
+				m.id,
+				m.kitchen_id,
+				CASE 
+					WHEN m.kitchen_id = c.kitchen_id THEN true
+					ELSE false
+				END AS "chefOwnsMenuItem"
+			FROM menu_items m
+			LEFT JOIN chefs c ON c.id = $1
+			WHERE m.id = $2
+			`,
+			[id, menu.id]
+		);
+		client.release();
+		if (rows[0].chefOwnsMenuItem) {
+			return;
+		} else {
+			throw new Error("Chef does not own this menu item");
+		}
 	});
 	fastify.register(require("fastify-auth"));
 	fastify.after(() => {
@@ -53,17 +52,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 					request.body;
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
-					`
-					INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) 
-					RETURNING 
-						name,
-						kitchen_id AS "kitchenID",
-						description, 
-						price, 
-						photo_primary_url as "primaryPhoto", 
-						gallery_photo_urls as "galleryPhoto",
-						tags;
-					`,
+					"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
 					[name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags]
 				);
 				client.release();
@@ -77,8 +66,11 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/kitchens/menu/:id",
-			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership]),
+			url: "/kitchen/menu-item/:id",
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
+				run: "all",
+				relation: "and",
+			}),
 			handler: async (request) => {
 				const { name, description, price, photoPrimaryURL, galleryPhotoURL, tags } = request.body;
 				const { id } = request.params;
@@ -88,14 +80,17 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 					[name, description, price, photoPrimaryURL, galleryPhotoURL, tags, id]
 				);
 				client.release();
-				return { code: 200, message: `Menu iteem with id ${id} has been updated`, rows };
+				return { code: 200, message: `Menu item with id ${id} has been updated`, rows };
 			},
 		});
 
 		fastify.route({
 			method: "DELETE",
-			url: "/kitchens/menu/:id",
-			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership]),
+			url: "/kitchen/menu-item/:id",
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
+				run: "all",
+				relation: "and",
+			}),
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();

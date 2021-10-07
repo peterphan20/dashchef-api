@@ -65,6 +65,7 @@ exports.up = (pgm) => {
     );
     CREATE TABLE posts(
       id SERIAL PRIMARY KEY,
+      author_id INTEGER REFERENCES chefs(id) ON DELETE SET NULL,
       title VARCHAR(120) NOT NULL,
       content VARCHAR(1000) NOT NULL,
       tags VARCHAR(40)[],

@@ -30,7 +30,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 				END AS "chefOwnsMenuItem"
 			FROM menu_items m
 			LEFT JOIN chefs c ON c.id = $1
-			WHERE m.id = $2
+			WHERE m.id = $2;
 			`,
 			[id, menu.id]
 		);

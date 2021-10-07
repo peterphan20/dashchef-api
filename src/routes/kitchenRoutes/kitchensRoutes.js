@@ -21,8 +21,8 @@ module.exports = async function kitchensRoutes(fastify) {
 				k.phone, 
 				k.avatar_url AS "avatarURL", 
 				k.created_at AS "createdAt",
-				c.first_name AS "chefFirstName",
-				c.last_name AS "chefLastName",
+				c.first_name AS "chefFirstname",
+				c.last_name AS "chefLastname",
 				json_agg(json_build_object(
 					'menuID', m.id,
 					'menuName', m.name,
@@ -49,7 +49,7 @@ module.exports = async function kitchensRoutes(fastify) {
 				c.first_name,
 				c.last_name
 			ORDER BY
-				k.name ASC
+				k.name ASC;
 			`,
 			[kitchen]
 		);

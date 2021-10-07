@@ -26,13 +26,13 @@ module.exports = async function usersAuthRoutes(fastify) {
 			url: "/users/update-user/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: async (request) => {
-				const { firstName, lastName, email, password, address, phone, avatarURL } = request.body;
+				const { firstname, lastname, email, password, address, phone, avatarURL } = request.body;
 				const { id } = request.params;
 				const hash = await bcrypt.hash(password, 10);
 				const client = await fastify.pg.connect();
 				const { rows } = await client.query(
 					"UPDATE users SET first_name=$1, last_name=$2, email=$3, password=$4, address=$5, phone=$6, avatar_url=$7 WHERE id=$8 RETURNING *;",
-					[firstName, lastName, email, hash, address, phone, avatarURL, id]
+					[firstname, lastname, email, hash, address, phone, avatarURL, id]
 				);
 				client.release();
 				return { code: 200, message: `Sucessfully updated user with id ${id}.`, rows };

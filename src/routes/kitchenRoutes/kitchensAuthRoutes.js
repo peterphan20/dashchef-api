@@ -6,40 +6,39 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		const { jwt } = fastify;
 
 		if (!request.raw.headers.auth) {
-			return done(new Error("Missing token header"));
+			return new Error("Missing token header");
 		}
 
-		jwt.verify(request.raw.headers.auth, async (err, decoded) => {
-			try {
-				const { id } = decoded;
-				const kitchen = request.params;
-				const client = await fastify.pg.connect();
-				const { rows } = await client.query(
-					`
-          SELECT 
-            c.id,
-            c.kitchen_id,
-            k.id,
-            CASE 
-              WHEN k.id = c.kitchen_id THEN true
-              ELSE false
-            END AS "chefOwnKitchen"
-            FROM kitchens k
-            LEFT JOIN chefs c ON c.id = $1
-            WHERE k.id = $2;
-        `,
-					[id, kitchen.id]
-				);
-				client.release();
-				if (rows[0].chefOwnKitchen) {
-					return done();
-				}
-				return done(new Error("User does not own this kitchen"));
-			} catch (error) {
-				console.error(error);
-				return done(new Error(error));
-			}
-		});
+		const decodedToken = jwt.decode(request.raw.headers.auth);
+		const { id, email, password } = decodedToken;
+
+		if (!id || !email || !password) {
+			return new Error("Token not valid");
+		}
+		const kitchen = request.params;
+		const client = await fastify.pg.connect();
+		const { rows } = await client.query(
+			`
+				SELECT
+					c.id,
+					c.kitchen_id,
+					k.id,
+					CASE
+						WHEN k.id = c.kitchen_id THEN true
+						ELSE false
+					END AS "chefOwnsKitchen"
+					FROM kitchens k
+					LEFT JOIN chefs c ON c.id = $1
+					WHERE k.id = $2;
+			`,
+			[id, kitchen.id]
+		);
+		client.release();
+		if (rows[0].chefOwnsKitchen) {
+			return;
+		} else {
+			throw new Error("User does not own this kitchen");
+		}
 	});
 	fastify.register(require("fastify-auth"));
 	fastify.after(() => {
@@ -74,7 +73,9 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		fastify.route({
 			method: "PUT",
 			url: "/kitchens/:id",
-			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership]),
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
+				run: "all",
+			}),
 			handler: async (request) => {
 				const { name, email, address, phone, avatarURL } = request.body;
 				const { id } = request.params;
@@ -91,7 +92,10 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		fastify.route({
 			method: "DELETE",
 			url: "/kitchens/:id",
-			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership]),
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
+				run: "all",
+				relation: "and",
+			}),
 			handler: async (request) => {
 				const { id } = request.params;
 				const client = await fastify.pg.connect();

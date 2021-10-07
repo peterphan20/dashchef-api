@@ -32,10 +32,10 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 					[id, menu.id]
 				);
 				client.release();
-				if (rows[0].chefOwnMenuItem) {
-					return done();
+				if (!rows[0].chefOwnMenuItem) {
+					return done(new Error("User does not own this kitchen"));
 				}
-				return done(new Error("User does not own this kitchen"));
+				return done();
 			} catch (error) {
 				console.error(error);
 				return done(new Error(error));

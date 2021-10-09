@@ -34,9 +34,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			[id, kitchen.id]
 		);
 		client.release();
-		if (rows[0].chefOwnsKitchen) {
-			return;
-		} else {
+		if (rows[0].chefOwnsKitchen === false) {
 			throw new Error("Chef does not own this kitchen");
 		}
 	});

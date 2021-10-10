@@ -19,13 +19,10 @@ async function verifyCommentOwnership(fastify) {
 		const { rows } = await client.query(
 			`
 			SELECT
-				u.id,
-				c.id,
-				c.author_user_id,
 				CASE
 					WHEN c.author_user_id = u.id THEN true
 					ELSE false
-				END AS "userOwnsComment"
+				END AS "userOwnsThisComment"
 			FROM comments c
 			LEFT JOIN users u ON u.id = $1
 			WHERE c.id = $2;
@@ -33,10 +30,8 @@ async function verifyCommentOwnership(fastify) {
 			[id, comment.id]
 		);
 		client.release();
-		if (rows[0].userOwnsComment) {
-			return;
-		} else {
-			throw new Error("Chef does not own this kitchen");
+		if (rows[0].userOwnsThisComment === false) {
+			throw new Error("User does not own this comment");
 		}
 	});
 }

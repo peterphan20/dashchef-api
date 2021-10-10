@@ -22,7 +22,7 @@ async function verifyKitchenOwnership(fastify) {
 				CASE
 					WHEN k.id = c.kitchen_id THEN true
 					ELSE false
-				END AS "chefOwnsKitchen"
+				END AS "chefOwnsThisKitchen"
 			FROM kitchens k
 			LEFT JOIN chefs c ON c.id = $1
 			WHERE k.id = $2;
@@ -30,7 +30,7 @@ async function verifyKitchenOwnership(fastify) {
 			[id, kitchen.id]
 		);
 		client.release();
-		if (rows[0].chefOwnsKitchen === false) {
+		if (rows[0].chefOwnsThisKitchen === false) {
 			throw new Error("Chef does not own this kitchen");
 		}
 	});

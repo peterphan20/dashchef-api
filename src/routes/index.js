@@ -1,4 +1,3 @@
-const serverRoute = require("./serverRoute");
 const usersRoutes = require("./userRoutes/usersRoutes");
 const usersAuthRoutes = require("./userRoutes/usersAuthRoutes");
 const authenticateUsers = require("./userRoutes/authenticationUsersRoutes");
@@ -14,7 +13,6 @@ const menuItemsAuthRoutes = require("./menuItemsRoutes/menuItemsAuthRoutes");
 const commentsUsersAuthRoutes = require("./commentsRoutes/commentsUsersAuthRoutes");
 
 module.exports = async function routes(fastify) {
-	fastify.register(serverRoute);
 	fastify.register(usersRoutes);
 	fastify.register(usersAuthRoutes);
 	fastify.register(authenticateUsers);

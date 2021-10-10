@@ -44,18 +44,14 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 	}
 
 	class ItemService {
-		async create() {
+		async create(request, reply) {
 			const busboy = new Busboy({ headers: request.headers });
-			const myTransformStream = new TransformableStream();
-
-			request.raw.on("data", (chunk) => myTransformStream.write(chunk));
-			request.raw.on("end", () => myTransformStream.end());
-			myTransformStream.pipe(busboy);
+			request.raw.pipe(busboy);
 
 			const bucketParams = { Bucket: "dashchef-dev" };
 			const dataObj = {};
 
-			busboy.on("file", function (fieldname, file, filename, encoding, mimetype) {
+			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
 				bucketParams.Key = crypto.randomBytes(20).toString("hex");
 				bucketParams.ContentType = mimetype;
 
@@ -65,13 +61,6 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 				file.on("end", async () => {
 					const file = Buffer.concat(fileBuffers);
 					bucketParams.Body = file;
-
-					try {
-						const data = await s3Client.send(new PutObjectCommand(bucketParams));
-						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-					} catch (err) {
-						console.log("There was an error uploading the image to S3", err);
-					}
 				});
 			});
 
@@ -81,25 +70,32 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 
 			let postedMenuItem = [];
 			busboy.on("finish", async () => {
-				console.log("Busboy has finished processing the formData", dataObj);
-				const { name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags } = dataObj;
-				const client = await fastify.pg.connect();
-				const { rows } = await client.query(
-					"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
-					[name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags]
-				);
-				client.release();
-				postedMenuItem = [...rows];
+				try {
+					const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+					if (s3res.$metadata.httpStatusCode !== 200) {
+						reply.code(400).send({ message: "Failed to post image to s3" });
+					}
+					dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
+					const { name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags } = dataObj;
+					const client = await fastify.pg.connect();
+					const { rows } = await client.query(
+						"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
+						[name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags]
+					);
+					client.release();
+					postedMenuItem = [...rows];
+					reply.code(201).send({
+						message: "Menu item successfully created!",
+						postedMenuItem,
+					});
+				} catch (err) {
+					console.log("Error", err);
+					reply.code(201).send({ message: "Kitchen successfully created!", postedKitchen });
+				}
 			});
-
-			return {
-				code: 201,
-				message: "Menu item successfully created!",
-				postedMenuItem,
-			};
 		}
 
-		async edit() {
+		async edit(request) {
 			const { name, description, price, photoPrimaryURL, galleryPhotoURL, tags } = request.body;
 			const { id } = request.params;
 			const client = await fastify.pg.connect();

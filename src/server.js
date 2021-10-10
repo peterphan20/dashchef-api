@@ -1,5 +1,5 @@
 require("dotenv").config();
-const fastify = require("fastify")({ logger: true });
+const fastify = require("fastify")();
 
 const PORT = process.env.PORT || 5000;
 

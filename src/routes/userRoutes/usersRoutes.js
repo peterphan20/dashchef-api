@@ -7,7 +7,7 @@ module.exports = async function usersRoutes(fastify) {
 		client.release;
 		return { code: 200, rows };
 	});
-	
+
 	fastify.get("/authenticated", async (request) => {
 		if (!request.raw.headers.auth) {
 			return { code: 403, authenticated: false };

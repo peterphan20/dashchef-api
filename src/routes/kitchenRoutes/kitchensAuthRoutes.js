@@ -95,7 +95,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			});
 		}
 
-		async edit() {
+		async edit(request) {
 			const { name, email, address, phone, avatarURL } = request.body;
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
@@ -107,7 +107,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			return { code: 200, message: `Kitchen with id ${id} has been updated`, rows };
 		}
 
-		async remove() {
+		async remove(request) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
 			await client.query("DELETE FROM kitchens WHERE id=$1 RETURNING *;", [id]);

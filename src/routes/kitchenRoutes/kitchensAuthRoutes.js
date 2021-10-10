@@ -85,7 +85,6 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 					);
 					await client.query("UPDATE chefs SET kitchen_id=$1 WHERE id=$2", [rows[0].id, chef.id]);
 					client.release();
-					console.log("lookie here ===>", rows);
 					postedKitchen = [...rows];
 					reply.code(201).send({ message: "Kitchen successfully created!", postedKitchen });
 				} catch (err) {

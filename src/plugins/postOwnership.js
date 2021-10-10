@@ -1,7 +1,7 @@
 const fp = require("fastify-plugin");
 
-async function verifyCommentOwnership(fastify) {
-	fastify.decorate("verifyCommentOwnership", async (request, reply) => {
+async function verifyPostOwnership(fastify) {
+	fastify.decorate("verifyPostOwnership", async (request, reply) => {
 		const { jwt } = fastify;
 
 		if (!request.raw.headers.auth) {
@@ -14,26 +14,31 @@ async function verifyCommentOwnership(fastify) {
 		if (!id || !email || !password) {
 			return new Error("Token not valid");
 		}
-		const comment = request.params;
+		const post = request.params;
 		const client = await fastify.pg.connect();
 		const { rows } = await client.query(
 			`
 			SELECT
+        c.id,
+				p.id,
+				p.author_id,
 				CASE
-					WHEN c.author_user_id = u.id THEN true
+					WHEN p.author_id = c.id THEN true
 					ELSE false
-				END AS "userOwnsThisComment"
-			FROM comments c
-			LEFT JOIN users u ON u.id = $1
-			WHERE c.id = $2;
+				END AS "chefOwnsPost"
+			FROM posts p
+			LEFT JOIN chefs c ON c.id = $1
+			WHERE p.id = $2;
 			`,
-			[id, comment.id]
+			[id, post.id]
 		);
 		client.release();
-		if (rows[0].userOwnsThisComment === false) {
-			throw new Error("User does not own this comment");
+		if (rows[0].chefOwnsPost) {
+			return;
+		} else {
+			throw new Error("Chef does not own this post");
 		}
 	});
 }
 
-module.exports = fp(verifyCommentOwnership);
+module.exports = fp(verifyPostOwnership);

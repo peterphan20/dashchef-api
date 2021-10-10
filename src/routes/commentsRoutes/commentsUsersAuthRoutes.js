@@ -20,7 +20,7 @@ module.exports = async function commentsUsersAuthRoutes(fastify) {
 		fastify.route({
 			method: "PUT",
 			url: "/comments/comment-update/:id",
-			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyCommentOwnership], {
 				run: "all",
 				relation: "and",
 			}),
@@ -30,7 +30,7 @@ module.exports = async function commentsUsersAuthRoutes(fastify) {
 		fastify.route({
 			method: "DELETE",
 			url: "/comments/comment-delete/:id",
-			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOwnership], {
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyCommentOwnership], {
 				run: "all",
 				relation: "and",
 			}),

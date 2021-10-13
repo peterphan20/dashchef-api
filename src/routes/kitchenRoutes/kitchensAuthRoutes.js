@@ -109,9 +109,9 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		async remove(request) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
-			await client.query("DELETE FROM kitchens WHERE id=$1 RETURNING *;", [id]);
+			const { rows } = await client.query("DELETE FROM kitchens WHERE id=$1 RETURNING *;", [id]);
 			client.release();
-			return { code: 200, message: `Kitchen with id ${id} has been deleted` };
+			return { code: 200, message: `Kitchen with id ${id} has been deleted`, rows };
 		}
 	}
 };

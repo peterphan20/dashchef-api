@@ -17,14 +17,14 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "POST",
-			url: "/kitchen/menu/create-item",
+			url: "/kitchen/create-item",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: itemService.create,
 		});
 
 		fastify.route({
 			method: "PUT",
-			url: "/kitchen/menu-item/:id",
+			url: "/kitchen/item-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyMenuItemOwnership], {
 				run: "all",
 				relation: "and",
@@ -34,7 +34,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "DELETE",
-			url: "/kitchen/menu-item/:id",
+			url: "/kitchen/item-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyMenuItemOwnership], {
 				run: "all",
 				relation: "and",

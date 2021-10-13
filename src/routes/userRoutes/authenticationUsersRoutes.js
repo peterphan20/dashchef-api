@@ -6,7 +6,7 @@ var crypto = require("crypto");
 
 module.exports = async function authenticateUsers(fastify) {
 	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());
-	
+
 	fastify.post("/auth/user-create", async (request, reply) => {
 		const busboy = new Busboy({ headers: request.headers });
 		request.raw.pipe(busboy);

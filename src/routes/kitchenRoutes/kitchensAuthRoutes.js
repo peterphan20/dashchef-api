@@ -77,6 +77,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 					}
 					dataObj.avatarURL = process.env.BASE_S3_URL + bucketParams.Key;
 					const { name, email, address, phone, avatarURL } = dataObj;
+					console.log(dataObj);
 					const chef = fastify.jwt.decode(request.raw.headers.auth);
 					const client = await fastify.pg.connect();
 					const { rows } = await client.query(

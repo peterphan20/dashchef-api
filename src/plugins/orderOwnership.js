@@ -21,11 +21,11 @@ async function verifyOrderOwnership(fastify) {
 			`
       SELECT 
         CASE 
-          WHEN o.user_id = u.id THEN true
+          WHEN o.users_id = u.id THEN true
           ELSE false
         END AS "chefOwnsOrder"
       FROM orders o
-      LEFT JOIN chefs c ON c.id = $1
+      LEFT JOIN users u ON u.id = $1
       WHERE o.id = $2;
       `,
 			[id, order.id]

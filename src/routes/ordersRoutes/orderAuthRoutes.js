@@ -17,7 +17,7 @@ module.exports = async function orderAuthRoutes(fastify) {
 				run: "all",
 				relation: "and",
 			}),
-			handler: orderService.hello,
+			handler: orderService.getOrder,
 		});
 
 		fastify.route({
@@ -52,7 +52,7 @@ module.exports = async function orderAuthRoutes(fastify) {
 	}
 
 	class OrderService {
-		async hello(request) {
+		async getOrder(request) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
@@ -89,7 +89,7 @@ module.exports = async function orderAuthRoutes(fastify) {
 		async remove(request) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
-			const { rows } = await client.query("DELETE FROM orders WHERE id=$1", [id]);
+			const { rows } = await client.query("DELETE FROM orders WHERE id=$1 RETURNING *;", [id]);
 			return { code: 200, message: `Order number ${id} has been cancelled`, rows };
 		}
 	}

@@ -1,81 +1,79 @@
 const usersRequireAuthentication = require("../../plugins/usersAuthenticator");
 const verifyOrderOwnership = require("../../plugins/orderOwnership");
 
-module.exports = async function orderAuthRoutes(fastify) {
+module.exports = async function orderStatusAuthRoutes(fastify) {
 	fastify.register(require("fastify-auth"));
 	fastify.register(usersRequireAuthentication);
 	fastify.register(verifyOrderOwnership);
 	fastify.after(routes);
 
 	function routes() {
-		const orderService = new OrderService();
+		const orderStatusService = new OrderStatusService();
 
 		fastify.route({
 			method: "GET",
-			url: "/orders",
+			url: "/orders/order-status",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOrderOwnership], {
 				run: "all",
 				relation: "and",
 			}),
-			handler: orderService.getAllOrders,
+			handler: orderStatusService.getAllOrderStatuses,
 		});
 
 		fastify.route({
 			method: "GET",
-			url: "/orders/:id",
+			url: "/orders/order-status/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOrderOwnership], {
 				run: "all",
 				relation: "and",
 			}),
-			handler: orderService.getOrder,
+			handler: orderStatusService.getOrderStatus,
 		});
 
 		fastify.route({
 			method: "POST",
-			url: "/orders/order-create",
-			preHandler: fastify.auth([fastify.verifyJWT], {
+			url: "/orders/order-status/status-create",
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOrderOwnership], {
 				run: "all",
 				relation: "and",
 			}),
-			handler: orderService.create,
+			handler: orderStatusService.create,
 		});
 
 		fastify.route({
 			method: "PUT",
-			url: "/orders/order-update/:id",
+			url: "/orders/order-status/status-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOrderOwnership], {
 				run: "all",
 				relation: "and",
 			}),
-			handler: orderService.edit,
+			handler: orderStatusService.edit,
 		});
 
 		fastify.route({
 			method: "DELETE",
-			url: "/orders/order-delete/:id",
+			url: "/orders/order-status/status-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyOrderOwnership], {
 				run: "all",
 				relation: "and",
 			}),
-			handler: orderService.remove,
+			handler: orderStatusService.remove,
 		});
 	}
 
-	class OrderService {
-		async getAllOrders() {
+	class OrderStatusService {
+		async getAllOrderStatuses() {
 			const client = await fastify.pg.connect();
-			const { rows } = await client.query(
-				'SELECT status, date_created AS "dateCreated", date_fulfilled AS "dateFulfilled" FROM orders'
-			);
+			const { rows } = await client.query("SELECT identifier, meaning FROM order_statuses");
 			client.release();
 			return { code: 200, rows };
 		}
 
-		async getOrder(request) {
+		async getOrderStatus(request) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				'SELECT status, date_created AS "dateCreated", date_fulfilled AS "dateFulfilled" FROM orders WHERE id=$1',
+				"SELECT identifier, meaning FROM order_statuses WHERE id=$1",
 				[id]
 			);
 			client.release();
@@ -83,33 +81,36 @@ module.exports = async function orderAuthRoutes(fastify) {
 		}
 
 		async create(request) {
-			const { menuItemID, kitchenID, userID, status, dateCreated, dateFulfilled } = request.body;
+			const { identifier, meaning } = request.body;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				"INSERT INTO orders (menu_item_id, kitchen_id, users_id, status, date_created, date_fulfilled) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
-				[menuItemID, kitchenID, userID, status, dateCreated, dateFulfilled]
+				"INSERT INTO order_statuses (identifier, meaning) VALUES ($1, $2) RETURNING *;",
+				[identifier, meaning]
 			);
 			client.release();
-			return { code: 201, message: "Order has been created", rows };
+			return { code: 201, message: "Order status has been created", rows };
 		}
 
 		async edit(request) {
-			const { status, dateFulfilled } = request.body;
 			const { id } = request.params;
+			const { identifier, meaning } = request.body;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				"UPDATE orders SET status=$1, date_fulfilled=$2 WHERE id=$3 RETURNING *;",
-				[status, dateFulfilled, id]
+				"UPDATE order_statuses SET identifier=$1, meaning=$2 WHERE id=$3 RETURNING *;",
+				[identifier, meaning, id]
 			);
 			client.release();
-			return { code: 200, message: `Order number ${id} has been fulfilled`, rows };
+			return { code: 200, message: `Order status for order number ${id} has been updated`, rows };
 		}
 
 		async remove(request) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
-			const { rows } = await client.query("DELETE FROM orders WHERE id=$1 RETURNING *;", [id]);
-			return { code: 200, message: `Order number ${id} has been cancelled`, rows };
+			const { rows } = await client.query("DELETE FROM order_statuses WHERE id=$1 RETURNING *;", [
+				id,
+			]);
+			client.release();
+			return { code: 200, message: `Order status for order number ${id} has been deleted`, rows };
 		}
 	}
 };

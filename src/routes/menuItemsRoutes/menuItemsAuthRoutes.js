@@ -76,11 +76,11 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 						reply.code(400).send({ message: "Failed to post image to s3" });
 					}
 					dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-					const { name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags } = dataObj;
+					const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
 					const client = await fastify.pg.connect();
 					const { rows } = await client.query(
 						"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
-						[name, id, description, price, photoPrimaryURL, galleryPhotoURL, tags]
+						[name, id, description, price, photoPrimaryURL, tags]
 					);
 					client.release();
 					postedMenuItem = [...rows];

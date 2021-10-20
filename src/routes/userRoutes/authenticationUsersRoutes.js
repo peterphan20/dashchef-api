@@ -1,8 +1,8 @@
 const bcrypt = require("bcrypt");
-const { s3Client } = require("../../helpers/s3Client");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const Busboy = require("busboy");
-var crypto = require("crypto");
+// const { s3Client } = require("../../helpers/s3Client");
+// const { PutObjectCommand } = require("@aws-sdk/client-s3");
+// const Busboy = require("busboy");
+// var crypto = require("crypto");
 
 module.exports = async function authenticateUsers(fastify) {
 	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());
@@ -16,12 +16,12 @@ module.exports = async function authenticateUsers(fastify) {
 
 		const hash = await bcrypt.hash(password, 10);
 		const client = await fastify.pg.connect();
-		await client.query(
+		const { rows } = await client.query(
 			"INSERT INTO users (first_name, last_name, email, password, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
 			[firstname, lastname, email, hash, address, phone, avatarURL]
 		);
 		client.release();
-		reply.code(201).send({ message: "User successful created!" });
+		return { code: 201, message: "User successful created!", data: rows[0] };
 	});
 
 	// fastify.post("/auth/user-image", async (request, reply) => {

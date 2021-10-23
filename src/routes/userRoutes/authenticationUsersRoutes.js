@@ -8,20 +8,25 @@ module.exports = async function authenticateUsers(fastify) {
 	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());
 
 	fastify.post("/auth/user", async (request, reply) => {
-		const { firstname, lastname, email, password, address, phone, avatarURL } = request.body;
+		const { firstName, lastName, email, password, address, phone } = request.body;
 
-		if (!firstname || !lastname || !email || !password || !address || !phone) {
+		if (!firstName || !lastName || !email || !password || !address || !phone) {
 			return { code: 400, message: "Missing values, please check input fields." };
 		}
 
 		const hash = await bcrypt.hash(password, 10);
 		const client = await fastify.pg.connect();
-		const { rows } = await client.query(
-			"INSERT INTO users (first_name, last_name, email, password, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
-			[firstname, lastname, email, hash, address, phone, avatarURL]
-		);
-		client.release();
-		return { code: 201, message: "User successful created!", data: rows[0] };
+		try {
+			const { rows } = await client.query(
+				'INSERT INTO users (first_name, last_name, email, password, address, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING first_name AS "firstName", last_name AS "lastName", email, password,address, phone;',
+				[firstName, lastName, email, hash, address, phone]
+			);
+			client.release();
+			return { code: 201, message: "User successful created!", rows };
+		} catch (err) {
+			console.log(err);
+			return { code: 400, message: "Bad request" };
+		}
 	});
 
 	// fastify.post("/auth/user-image", async (request, reply) => {
@@ -85,7 +90,7 @@ module.exports = async function authenticateUsers(fastify) {
 
 		const client = await fastify.pg.connect();
 		const { rows } = await client.query(
-			'SELECT password, id, first_name AS "firstname", last_name AS "lastname" FROM users WHERE email=$1',
+			'SELECT password, id, first_name AS "firstName", last_name AS "lastName", email, address, phone, avatar_url AS "avatarURL" FROM users WHERE email=$1',
 			[email]
 		);
 		client.release();
@@ -101,8 +106,12 @@ module.exports = async function authenticateUsers(fastify) {
 				code: 200,
 				message: "Successfully logged in!",
 				id: rows[0].id,
-				firstName: rows[0].firstname,
-				lastname: rows[0].lastname,
+				firstName: rows[0].firstName,
+				lastName: rows[0].lastName,
+				email: rows[0].email,
+				address: rows[0].address,
+				phone: rows[0].phone,
+				avatarURL: rows[0].avatarURL,
 				token,
 			};
 		}

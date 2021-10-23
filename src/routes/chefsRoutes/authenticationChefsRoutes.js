@@ -8,17 +8,17 @@ module.exports = async function authenticateChefs(fastify) {
 	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());
 
 	fastify.post("/auth/chef", async (request, reply) => {
-		const { firstname, lastname, email, password, address, phone, avatarURL } = request.body;
+		const { firstName, lastName, email, password, address, phone, avatarURL } = request.body;
 
-		if (!firstname || !lastname || !email || !password || !address || !phone) {
+		if (!firstName || !lastName || !email || !password || !address || !phone) {
 			return { code: 400, message: "Missing values, please check input fields." };
 		}
 
 		const hash = await bcrypt.hash(password, 10);
 		const client = await fastify.pg.connect();
 		await client.query(
-			"INSERT INTO chefs (first_name, last_name, email, password, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
-			[firstname, lastname, email, hash, address, phone, avatarURL]
+			'INSERT INTO chefs (first_name, last_name, email, password, address, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING first_name AS "firstName", last_name AS "lastName", email, password,address, phone;',
+			[firstName, lastName, email, hash, address, phone]
 		);
 		client.release();
 		reply.code(201).send({ message: "User successful created!" });
@@ -84,7 +84,10 @@ module.exports = async function authenticateChefs(fastify) {
 		}
 
 		const client = await fastify.pg.connect();
-		const { rows } = await client.query("SELECT password, id FROM chefs WHERE email=$1", [email]);
+		const { rows } = await client.query(
+			'SELECT password, id, first_name AS "firstName", last_name AS "lastName", email, address, phone, avatar_url AS "avatarURL" FROM chefs WHERE email=$1',
+			[email]
+		);
 		client.release();
 		const passwordMatch = await bcrypt.compare(password, rows[0].password);
 		if (passwordMatch) {
@@ -94,7 +97,18 @@ module.exports = async function authenticateChefs(fastify) {
 				password,
 				id: rows[0].id,
 			});
-			return { code: 200, message: "Successfully logged in!", chefID: rows[0].id, token };
+			return {
+				code: 200,
+				message: "Successfully logged in!",
+				id: rows[0].id,
+				firstName: rows[0].firstName,
+				lastName: rows[0].lastName,
+				email: rows[0].email,
+				address: rows[0].address,
+				phone: rows[0].phone,
+				avatarURL: rows[0].avatarURL,
+				token,
+			};
 		}
 		return { code: 400, message: "Invalid email or password provided, please try again!" };
 	});

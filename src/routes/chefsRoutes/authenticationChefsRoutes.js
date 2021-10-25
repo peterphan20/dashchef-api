@@ -8,7 +8,7 @@ module.exports = async function authenticateChefs(fastify) {
 	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());
 
 	fastify.post("/auth/chef", async (request, reply) => {
-		const { firstName, lastName, email, password, address, phone, avatarURL } = request.body;
+		const { firstName, lastName, email, password, address, phone } = request.body;
 
 		if (!firstName || !lastName || !email || !password || !address || !phone) {
 			return { code: 400, message: "Missing values, please check input fields." };
@@ -16,12 +16,17 @@ module.exports = async function authenticateChefs(fastify) {
 
 		const hash = await bcrypt.hash(password, 10);
 		const client = await fastify.pg.connect();
-		await client.query(
-			'INSERT INTO chefs (first_name, last_name, email, password, address, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING first_name AS "firstName", last_name AS "lastName", email, password,address, phone;',
-			[firstName, lastName, email, hash, address, phone]
-		);
-		client.release();
-		reply.code(201).send({ message: "User successful created!" });
+		try {
+			const { rows } = await client.query(
+				'INSERT INTO chefs (first_name, last_name, email, password, address, phone) VALUES ($1, $2, $3, $4, $5, $6) RETURNING first_name AS "firstName", last_name AS "lastName", email, password,address, phone;',
+				[firstName, lastName, email, hash, address, phone]
+			);
+			client.release();
+			return { code: 201, message: "Chef successful created!", rows };
+		} catch (err) {
+			console.log(err);
+			return { code: 400, message: "Bad request" };
+		}
 	});
 
 	// fastify.post("/auth/chef-create", async (request, reply) => {
@@ -85,7 +90,7 @@ module.exports = async function authenticateChefs(fastify) {
 
 		const client = await fastify.pg.connect();
 		const { rows } = await client.query(
-			'SELECT password, id, first_name AS "firstName", last_name AS "lastName", email, address, phone, avatar_url AS "avatarURL" FROM chefs WHERE email=$1',
+			'SELECT password, id, first_name AS "firstName", last_name AS "lastName", email, address, phone, kitchen_id AS "kitchenID", avatar_url AS "avatarURL" FROM chefs WHERE email=$1',
 			[email]
 		);
 		client.release();
@@ -101,6 +106,7 @@ module.exports = async function authenticateChefs(fastify) {
 				code: 200,
 				message: "Successfully logged in!",
 				id: rows[0].id,
+				kitchenID: rows[0].kitchenID,
 				firstName: rows[0].firstName,
 				lastName: rows[0].lastName,
 				email: rows[0].email,

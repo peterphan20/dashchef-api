@@ -79,7 +79,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 					const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
 					const client = await fastify.pg.connect();
 					const { rows } = await client.query(
-						"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, gallery_photo_urls, tags) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
+						'INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, tags) VALUES ($1, $2, $3, $4, $5, $6) RETURNING name, kitchen_id AS "kitchenID", description, price photo_primary_url AS "photoPrimaryURL", tags;',
 						[name, id, description, price, photoPrimaryURL, tags]
 					);
 					client.release();

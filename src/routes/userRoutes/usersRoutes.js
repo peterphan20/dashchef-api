@@ -1,13 +1,4 @@
 module.exports = async function usersRoutes(fastify) {
-	fastify.get("/users", async () => {
-		const client = await fastify.pg.connect();
-		const { rows } = await client.query(
-			'SELECT first_name AS "firstName", last_name AS "lastName", email, address, phone, signup_date AS "signupDate", avatar_url AS "avatarURL" FROM users'
-		);
-		client.release;
-		return { code: 200, rows };
-	});
-
 	fastify.get("/user/:id", async function (request) {
 		const { id } = request.params;
 		const client = await fastify.pg.connect();

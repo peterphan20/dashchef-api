@@ -24,13 +24,13 @@ module.exports = async function kitchensRoutes(fastify) {
 				c.first_name AS "chefFirstName",
 				c.last_name AS "chefLastName",
 				json_agg(json_build_object(
-					'menuItemID', m.id,
-					'menuItemName', m.name,
-					'menuItemDescription', m.description,
-					'menuItemPrice', m.price,
-					'menuItemPhotoPrimaryURL', m.photo_primary_url,
-					'menuItemGalleryPhotoURL', m.gallery_photo_urls,
-					'menuItemTags', m.tags
+					'itemID', m.id,
+					'itemName', m.name,
+					'itemDescription', m.description,
+					'itemPrice', m.price,
+					'itemPhotoPrimaryURL', m.photo_primary_url,
+					'itemGalleryPhotoURL', m.gallery_photo_urls,
+					'itemTags', m.tags
 				) ORDER BY m.name ASC) AS menuItems 
 			FROM kitchens k
 			LEFT JOIN menu_items m

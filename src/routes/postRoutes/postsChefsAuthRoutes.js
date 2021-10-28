@@ -44,52 +44,64 @@ module.exports = async function postsChefsAuthRoutes(fastify) {
 	}
 
 	class PostService {
-		async create(request, reply) {
-			const busboy = new Busboy({ headers: request.headers });
-			request.raw.pipe(busboy);
+		// async create(request, reply) {
+		// 	const busboy = new Busboy({ headers: request.headers });
+		// 	request.raw.pipe(busboy);
 
-			const bucketParams = { Bucket: "dashchef-dev" };
-			const dataObj = {};
+		// 	const bucketParams = { Bucket: "dashchef-dev" };
+		// 	const dataObj = {};
 
-			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-				bucketParams.Key = crypto.randomBytes(20).toString("hex");
-				bucketParams.ContentType = mimetype;
+		// 	busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
+		// 		bucketParams.Key = crypto.randomBytes(20).toString("hex");
+		// 		bucketParams.ContentType = mimetype;
 
-				const fileBuffers = [];
-				file.on("data", (data) => fileBuffers.push(data));
+		// 		const fileBuffers = [];
+		// 		file.on("data", (data) => fileBuffers.push(data));
 
-				file.on("end", async () => {
-					const file = Buffer.concat(fileBuffers);
-					bucketParams.Body = file;
-				});
-			});
+		// 		file.on("end", async () => {
+		// 			const file = Buffer.concat(fileBuffers);
+		// 			bucketParams.Body = file;
+		// 		});
+		// 	});
 
-			busboy.on("field", (fieldname, val) => {
-				dataObj[fieldname] = val;
-			});
+		// 	busboy.on("field", (fieldname, val) => {
+		// 		dataObj[fieldname] = val;
+		// 	});
 
-			let postedPost = [];
-			busboy.on("finish", async () => {
-				try {
-					const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-					if (s3res.$metadata.httpStatusCode !== 200) {
-						reply.code(400).send({ message: "Failed to post image to s3" });
-					}
-					dataObj.imageURL = process.env.BASE_S3_URL + bucketParams.Key;
-					const { id, title, content, tags, imageURL } = dataObj;
-					const client = await fastify.pg.connect();
-					const { rows } = await client.query(
-						"INSERT INTO posts (author_id, title, content, tags, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
-						[id, title, content, tags, imageURL]
-					);
-					client.release();
-					postedPost = [...rows];
-					reply.code(201).send({ message: "Post successfully created!", postedPost });
-				} catch (err) {
-					console.log("Error", err);
-					reply.code(400).send({ message: "Error, something went wrong :( " });
-				}
-			});
+		// 	let postedPost = [];
+		// 	busboy.on("finish", async () => {
+		// 		try {
+		// 			const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+		// 			if (s3res.$metadata.httpStatusCode !== 200) {
+		// 				reply.code(400).send({ message: "Failed to post image to s3" });
+		// 			}
+		// 			dataObj.imageURL = process.env.BASE_S3_URL + bucketParams.Key;
+		// 			const { id, title, content, tags, imageURL } = dataObj;
+		// 			const client = await fastify.pg.connect();
+		// 			const { rows } = await client.query(
+		// 				"INSERT INTO posts (author_id, title, content, tags, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
+		// 				[id, title, content, tags, imageURL]
+		// 			);
+		// 			client.release();
+		// 			postedPost = [...rows];
+		// 			reply.code(201).send({ message: "Post successfully created!", postedPost });
+		// 		} catch (err) {
+		// 			console.log("Error", err);
+		// 			reply.code(400).send({ message: "Error, something went wrong :( " });
+		// 		}
+		// 	});
+		// }
+
+		async create(request) {
+			const { id, title, content, tags, imageURL } = request.body;
+			const client = await fastify.pg.connect();
+			const { rows } = await client.query(
+				"INSERT INTO posts (author_id, title, content, tags, image_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
+				[id, title, content, tags, imageURL]
+			);
+			client.release();
+			postedPost = [...rows];
+			reply.code(201).send({ message: "Post successfully created!", postedPost });
 		}
 
 		async edit(request) {
@@ -97,7 +109,7 @@ module.exports = async function postsChefsAuthRoutes(fastify) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				"UPDATE posts SET title=$1, content=$2, tags=$3, image_url=$4 WHERE id=$5 RETURNING *;",
+				'UPDATE posts SET title=$1, content=$2, tags=$3, image_url=$4 WHERE id=$5 RETURNING title, content, tags, image_url AS "imageURL";',
 				[title, content, tags, imageURL, id]
 			);
 			client.release();

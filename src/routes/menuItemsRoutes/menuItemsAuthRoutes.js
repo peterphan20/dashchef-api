@@ -99,11 +99,11 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 			const { name, id, description, price, tags } = request.body;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				'INSERT INTO menu_items (name, kitchen_id, description, price, tags) VALUES ($1, $2, $3, $4, $5) RETURNING name, kitchen_id AS "kitchenID", description, price, tags;',
+				"INSERT INTO menu_items (name, kitchen_id, description, price, tags) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
 				[name, id, description, price, tags]
 			);
 			client.release();
-			return { code: 201, message: `Menu item ${name} for kitchen ${id} has been created`, rows };
+			return { code: 201, message: `Menu item ${name} was successfully created`, rows };
 		}
 
 		async edit(request) {
@@ -111,7 +111,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				"UPDATE kitchens SET name=$1, description=$2, price=$3, photo_primary_url=$4, gallery_photo_urls=$5, tags=$6 WHERE id=$7 RETURNING *;",
+				"UPDATE menu_items SET name=$1, description=$2, price=$3, tags=$4 WHERE id=$5 RETURNING *;",
 				[name, description, price, tags, id]
 			);
 			client.release();

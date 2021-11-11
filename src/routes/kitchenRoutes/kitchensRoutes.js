@@ -2,7 +2,7 @@ module.exports = async function kitchensRoutes(fastify) {
 	fastify.get("/kitchens", async (request, reply) => {
 		const client = await fastify.pg.connect();
 		const { rows } = await client.query(
-			"SELECT name, email, address, phone, avatar_url, created_at FROM kitchens"
+			'SELECT name, email, address, phone, avatar_url AS "avatarURL", created_at AS "createdAt" FROM kitchens'
 		);
 		client.release();
 		return { code: 200, rows };

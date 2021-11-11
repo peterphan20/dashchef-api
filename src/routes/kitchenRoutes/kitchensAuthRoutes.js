@@ -99,11 +99,11 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			const { name, email, address, phone } = request.body;
 
 			if (!name || !email || !address || !phone) return { code: 400, message: "Missing values" };
-			
+
 			const chef = fastify.jwt.decode(request.raw.headers.auth);
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				"INSERT INTO kitchens (name, email, address, phone) VALUES ($1, $2, $3, $4) RETURNING id, name, email, address, phone;",
+				"INSERT INTO kitchens (name, email, address, phone) VALUES ($1, $2, $3, $4) RETURNING *;",
 				[name, email, address, phone]
 			);
 			await client.query("UPDATE chefs SET kitchen_id=$1 WHERE id=$2", [rows[0].id, chef.id]);
@@ -116,12 +116,12 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		}
 
 		async edit(request) {
-			const { name, email, address, phone, avatarURL } = request.body;
+			const { email, address, phone } = request.body;
 			const { id } = request.params;
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				"UPDATE kitchens SET name=$1, email=$2, address=$3, phone=$4, avatar_url=$5 WHERE id=$6 RETURNING *;",
-				[name, email, address, phone, avatarURL, id]
+				"UPDATE kitchens SET email=$1, address=$2, phone=$3 WHERE id=$4 RETURNING *;",
+				[email, address, phone, id]
 			);
 			client.release();
 			return { code: 200, message: `Kitchen with id ${id} has been updated`, rows };

@@ -97,15 +97,56 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 		}
 
 		async edit(request) {
-			const { name, description, price, tags } = request.body;
-			const { id } = request.params;
-			const client = await fastify.pg.connect();
-			const { rows } = await client.query(
-				"UPDATE menu_items SET name=$1, description=$2, price=$3, tags=$4 WHERE id=$5 RETURNING *;",
-				[name, description, price, tags, id]
-			);
-			client.release();
-			return { code: 200, message: `Menu item with id ${id} has been updated`, rows };
+			const busboy = new Busboy({ headers: request.headers });
+			request.raw.pipe(busboy);
+
+			const bucketParams = { Bucket: "dashchef-dev" };
+			const dataObj = {};
+
+			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
+				bucketParams.Key = crypto.randomBytes(20).toString("hex");
+				bucketParams.ContentType = mimetype;
+
+				const fileBuffers = [];
+				file.on("data", (data) => fileBuffers.push(data));
+
+				file.on("end", async () => {
+					const file = Buffer.concat(fileBuffers);
+					bucketParams.Body = file;
+				});
+			});
+
+			busboy.on("field", (fieldname, val) => {
+				dataObj[fieldname] = val;
+			});
+
+			let updatedMenuItem = [];
+			busboy.on("finish", async () => {
+				try {
+					const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+					if (s3res.$metadata.httpStatusCode !== 200) {
+						reply.code(400).send({ message: "Failed to post image to s3" });
+					}
+					dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
+					const { name, description, price, photoPrimaryURL, tags } = dataObj;
+					const { id } = request.params;
+					const client = await fastify.pg.connect();
+					const { rows } = await client.query(
+						"UPDATE menu_items SET name=$1, description=$2, price=$3, photo_primary_url=$4 tags=$5 WHERE id=$6 RETURNING *;",
+						[name, description, price, photoPrimaryURL, tags, id]
+					);
+					client.release();
+					updatedMenuItem = [...rows];
+					reply.code(200).send({
+						code: 200,
+						message: `Menu item with id ${id} has been updated`,
+						updatedMenuItem,
+					});
+				} catch (err) {
+					console.log("Error", err);
+					reply.code(400).send({ message: "Error, something went wrong :( " });
+				}
+			});
 		}
 
 		async remove(request) {

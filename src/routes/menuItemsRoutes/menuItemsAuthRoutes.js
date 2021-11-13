@@ -58,7 +58,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 				const fileBuffers = [];
 				file.on("data", (data) => fileBuffers.push(data));
 
-				file.on("end", async () => {
+				file.on("end", () => {
 					const file = Buffer.concat(fileBuffers);
 					bucketParams.Body = file;
 				});
@@ -69,31 +69,37 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 			});
 
 			let postedMenuItem = [];
-			busboy.on("finish", async () => {
-				try {
-					const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-					if (s3res.$metadata.httpStatusCode !== 200) {
-						reply.code(400).send({ message: "Failed to post image to s3" });
+			const something = new Promise((resolve, reject) => {
+				busboy.on("finish", async () => {
+					try {
+						const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+						if (s3res.$metadata.httpStatusCode !== 200) {
+							reply.code(400).send({ message: "Failed to post image to s3" });
+						}
+						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
+						const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
+						const client = await fastify.pg.connect();
+						const { rows } = await client.query(
+							"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, tags) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
+							[name, id, description, price, photoPrimaryURL, tags]
+						);
+						client.release();
+						postedMenuItem = [...rows];
+						reply.code(201).send({
+							code: 201,
+							message: `Menu item ${name} was successfully created!`,
+							postedMenuItem,
+						});
+						resolve();
+					} catch (err) {
+						console.log("Error", err);
+						reject();
+						reply.code(400).send({ message: "Error, something went wrong :( " });
 					}
-					dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-					const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
-					const client = await fastify.pg.connect();
-					const { rows } = await client.query(
-						"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, tags) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
-						[name, id, description, price, photoPrimaryURL, tags]
-					);
-					client.release();
-					postedMenuItem = [...rows];
-					reply.code(201).send({
-						code: 201,
-						message: `Menu item ${name} was successfully created!`,
-						postedMenuItem,
-					});
-				} catch (err) {
-					console.log("Error", err);
-					reply.code(400).send({ message: "Error, something went wrong :( " });
-				}
+				});
 			});
+			await something;
+			console.log("\n\n\n reached the end of the code \n\n\n");
 		}
 
 		async edit(request) {

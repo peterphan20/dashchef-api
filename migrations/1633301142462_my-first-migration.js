@@ -23,7 +23,8 @@ exports.up = (pgm) => {
       address VARCHAR(240) NOT NULL,
       phone VARCHAR(15) NOT NULL,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-      avatar_url VARCHAR(240)
+      avatar_url VARCHAR(240),
+      banner_url VARCHAR(240)
     );
     CREATE TABLE chefs(
       id SERIAL PRIMARY KEY,

@@ -99,7 +99,6 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 				});
 			});
 			await something;
-			console.log("\n\n\n reached the end of the code \n\n\n");
 		}
 
 		async edit(request) {

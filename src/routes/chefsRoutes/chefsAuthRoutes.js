@@ -18,7 +18,7 @@ module.exports = async function chefsAuthRoutes(fastify) {
 
 		fastify.route({
 			method: "PUT",
-			url: "/chefs/banner-update/:id",
+			url: "/chefs/avatar-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
 			handler: chefsService.editAvatar,
 		});

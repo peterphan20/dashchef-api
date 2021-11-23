@@ -1,8 +1,4 @@
 const bcrypt = require("bcrypt");
-const { s3Client } = require("../../helpers/s3Client");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const Busboy = require("busboy");
-var crypto = require("crypto");
 
 module.exports = async function authenticateChefs(fastify) {
 	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());

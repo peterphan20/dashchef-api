@@ -126,32 +126,37 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 			});
 
 			let updatedMenuItem = [];
-			busboy.on("finish", async () => {
-				try {
-					const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-					if (s3res.$metadata.httpStatusCode !== 200) {
-						reply.code(400).send({ message: "Failed to post image to s3" });
+			const something = new Promise((resolve, reject) => {
+				busboy.on("finish", async () => {
+					try {
+						const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+						if (s3res.$metadata.httpStatusCode !== 200) {
+							reply.code(400).send({ message: "Failed to post image to s3" });
+						}
+						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
+						const { name, description, price, photoPrimaryURL, galleryPhotoURL, tags } = dataObj;
+						const { id } = request.params;
+						const client = await fastify.pg.connect();
+						const { rows } = await client.query(
+							"UPDATE menu_items SET name=$1, description=$2, price=$3, photo_primary_url=$4 gallery_photo_urls=$5 tags=$6 WHERE id=$7 RETURNING *;",
+							[name, description, price, photoPrimaryURL, galleryPhotoURL, tags, id]
+						);
+						client.release();
+						updatedMenuItem = [...rows];
+						reply.code(200).send({
+							code: 200,
+							message: `Menu item with id ${id} has been updated`,
+							updatedMenuItem,
+						});
+						resolve();
+					} catch (err) {
+						console.log("Error", err);
+						reject();
+						reply.code(400).send({ message: "Error, something went wrong :( " });
 					}
-					dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-					const { name, description, price, photoPrimaryURL, tags } = dataObj;
-					const { id } = request.params;
-					const client = await fastify.pg.connect();
-					const { rows } = await client.query(
-						"UPDATE menu_items SET name=$1, description=$2, price=$3, photo_primary_url=$4 tags=$5 WHERE id=$6 RETURNING *;",
-						[name, description, price, photoPrimaryURL, tags, id]
-					);
-					client.release();
-					updatedMenuItem = [...rows];
-					reply.code(200).send({
-						code: 200,
-						message: `Menu item with id ${id} has been updated`,
-						updatedMenuItem,
-					});
-				} catch (err) {
-					console.log("Error", err);
-					reply.code(400).send({ message: "Error, something went wrong :( " });
-				}
+				});
 			});
+			await something;
 		}
 
 		async remove(request) {

@@ -3,7 +3,7 @@ module.exports = async function chefsRoutes(fastify) {
 		const { id } = request.params;
 		const client = await fastify.pg.connect();
 		const { rows } = await client.query(
-			'SELECT first_name AS "firstName", last_name AS "lastName", email, address, phone, signup_date AS "signupDate", avatar_url AS "avatarURL" FROM chefs WHERE id=$1',
+			'SELECT id, first_name AS "firstName", last_name AS "lastName", kitchen_id AS "kitchenID", email, address, phone, signup_date AS "signupDate", avatar_url AS "avatarURL" FROM chefs WHERE id=$1',
 			[id]
 		);
 		client.release();

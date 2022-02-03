@@ -1,8 +1,8 @@
 const usersRoutes = require("./userRoutes/usersRoutes");
-const usersAuthRoutes = require("./userRoutes/usersAuthRoutes");
+const usersCRUDRoutes = require("./userRoutes/usersCRUDRoutes");
 const authenticateUsers = require("./userRoutes/authenticationUsersRoutes");
 const chefsRoutes = require("./chefsRoutes/chefsRoutes");
-const chefsAuthRoutes = require("./chefsRoutes/chefsAuthRoutes");
+const chefsCRUDRoutes = require("./chefsRoutes/chefsCRUDRoutes");
 const authenticateChefs = require("./chefsRoutes/authenticationChefsRoutes");
 const kitchensRoutes = require("./kitchenRoutes/kitchensRoutes");
 const kitchensAuthRoutes = require("./kitchenRoutes/kitchensAuthRoutes");
@@ -16,10 +16,10 @@ const orderStatusAuthRoutes = require("./orderStatusRoutes/orderStatusAuthRoutes
 
 module.exports = async function routes(fastify) {
 	fastify.register(usersRoutes);
-	fastify.register(usersAuthRoutes);
+	fastify.register(usersCRUDRoutes);
 	fastify.register(authenticateUsers);
 	fastify.register(chefsRoutes);
-	fastify.register(chefsAuthRoutes);
+	fastify.register(chefsCRUDRoutes);
 	fastify.register(authenticateChefs);
 	fastify.register(kitchensRoutes);
 	fastify.register(kitchensAuthRoutes);

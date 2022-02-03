@@ -1,45 +1,44 @@
 const chefsRequireAuthentication = require("../../plugins/chefsAuthenticator");
 const bcrypt = require("bcrypt");
 
-module.exports = async function chefsAuthRoutes(fastify) {
+module.exports = async function chefsCRUDRoutes(fastify) {
 	fastify.register(require("fastify-auth"));
 	fastify.register(chefsRequireAuthentication);
 	fastify.after(routes);
 
 	function routes() {
-		const chefsService = new ChefsService();
+		const chefService = new ChefService();
 
 		fastify.route({
 			method: "PUT",
 			url: "/chefs/chef-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
-			handler: chefsService.edit,
+			handler: chefService.edit,
 		});
 
 		fastify.route({
 			method: "PUT",
 			url: "/chefs/avatar-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
-			handler: chefsService.editAvatar,
+			handler: chefService.editAvatar,
 		});
 
 		fastify.route({
 			method: "DELETE",
 			url: "/chefs/chef-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT]),
-			handler: chefsService.remove,
+			handler: chefService.remove,
 		});
 	}
 
-	class ChefsService {
+	class ChefService {
 		async edit(request) {
-			const { firstName, lastName, email, password, address, phone } = request.body;
+			const { firstName, lastName, address, phone } = request.body;
 			const { id } = request.params;
-			const hash = await bcrypt.hash(password, 10);
 			const client = await fastify.pg.connect();
 			const { rows } = await client.query(
-				'UPDATE chefs SET first_name=$1, last_name=$2, email=$3, password=$4, address=$5, phone=$6 WHERE id=$7 RETURNING first_name AS "firstName", last_name AS "lastName", email, password, address, phone;',
-				[firstName, lastName, email, hash, address, phone, id]
+				'UPDATE chefs SET first_name=$1, last_name=$2, address=$3, phone=$4 WHERE id=$5 RETURNING first_name AS "firstName", last_name AS "lastName", email, password, address, phone;',
+				[firstName, lastName, address, phone, id]
 			);
 			client.release();
 			return { code: 200, message: `Sucessfully updated chef with id ${id}.`, rows };

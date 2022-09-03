@@ -78,10 +78,13 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 						}
 						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
 						const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
+						const formattedTags = `(${tags
+							.map((tag) => JSON.stringify(tag.toString()))
+							.join(", ")})`;
 						const client = await fastify.pg.connect();
 						const { rows } = await client.query(
 							"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, tags) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
-							[name, id, description, price, photoPrimaryURL, tags]
+							[name, id, description, price, photoPrimaryURL, formattedTags]
 						);
 						client.release();
 						postedMenuItem = [...rows];

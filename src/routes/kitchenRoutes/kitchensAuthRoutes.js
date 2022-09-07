@@ -29,17 +29,27 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 				run: "all",
 				relation: "and",
 			}),
+			handler: kitchenService.edit,
+		});
+
+		fastify.route({
+			method: "PUT",
+			url: "/kitchens/avatar-update/:id",
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyKitchenOwnership], {
+				run: "all",
+				relation: "and",
+			}),
 			handler: kitchenService.editAvatar,
 		});
 
 		fastify.route({
 			method: "PUT",
-			url: "/kitchens/avatar-banner-update/:id",
+			url: "/kitchens/banner-update/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyKitchenOwnership], {
 				run: "all",
 				relation: "and",
 			}),
-			handler: kitchenService.edit,
+			handler: kitchenService.editBanner,
 		});
 
 		fastify.route({
@@ -184,6 +194,64 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 						updatedAvatar = [...rows];
 						client.release();
 						reply.code(200).send({ code: 200, message: "User successful created!", updatedAvatar });
+						resolve();
+					} catch (err) {
+						console.log("Error", err);
+						reject();
+						reply.code(400).send({ message: "Error, something went wrong :( " });
+					}
+				});
+			});
+			await something;
+		}
+
+		async editBanner(request) {
+			const busboy = new Busboy({ headers: request.headers });
+			request.raw.pipe(busboy);
+
+			const bucketParams = { Bucket: "dashchef-dev" };
+			const dataObj = {};
+
+			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
+				bucketParams.Key = crypto.randomBytes(20).toString("hex");
+				bucketParams.ContentType = mimetype;
+
+				const fileBuffers = [];
+				file.on("data", (data) => fileBuffers.push(data));
+
+				file.on("end", async () => {
+					const file = Buffer.concat(fileBuffers);
+					bucketParams.Body = file;
+				});
+			});
+
+			busboy.on("field", (fieldname, val) => {
+				dataObj[fieldname] = val;
+			});
+
+			const updatedBanner = [];
+			const something = new Promise((resolve, reject) => {
+				busboy.on("finish", async () => {
+					try {
+						const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+						if (s3res.$metadata.httpStatusCode !== 200) {
+							reply.code(400).send({ message: "Failed to post image to s3" });
+						}
+						dataObj.bannerURL = process.env.BASE_S3_URL + bucketParams.Key;
+						const { bannerURL, id } = dataObj;
+
+						if (!bannerURL || !id) {
+							return { code: 400, message: "Missing values, please check input fields." };
+						}
+
+						const client = await fastify.pg.connect();
+						await client.query("UPDATE kitchens SET banner_url=$1, WHERE id=$2 RETURNING *;", [
+							bannerURL,
+							id,
+						]);
+						updatedBanner = [...rows];
+						client.release();
+						reply.code(200).send({ code: 200, message: "User successful created!", updatedBanner });
 						resolve();
 					} catch (err) {
 						console.log("Error", err);

@@ -1,9 +1,13 @@
 const chefsRequireAuthentication = require("../../plugins/chefsAuthenticator");
-const bcrypt = require("bcrypt");
+const { s3Client } = require("../../helpers/s3Client");
+const { PutObjectCommand } = require("@aws-sdk/client-s3");
+const Busboy = require("busboy");
+var crypto = require("crypto");
 
 module.exports = async function chefsCRUDRoutes(fastify) {
 	fastify.register(require("fastify-auth"));
 	fastify.register(chefsRequireAuthentication);
+	fastify.addContentTypeParser("multipart/form-data", (request, payload, done) => done());
 	fastify.after(routes);
 
 	function routes() {
@@ -44,12 +48,11 @@ module.exports = async function chefsCRUDRoutes(fastify) {
 			return { code: 200, message: `Sucessfully updated chef with id ${id}.`, rows };
 		}
 
-		async editAvatar(request) {
+		async editAvatar(request, reply) {
 			const busboy = new Busboy({ headers: request.headers });
 			request.raw.pipe(busboy);
 
 			const bucketParams = { Bucket: "dashchef-dev" };
-			const dataObj = {};
 
 			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
 				bucketParams.Key = crypto.randomBytes(20).toString("hex");
@@ -64,38 +67,45 @@ module.exports = async function chefsCRUDRoutes(fastify) {
 				});
 			});
 
+			const dataObj = {};
 			busboy.on("field", (fieldname, val) => {
 				dataObj[fieldname] = val;
 			});
 
-			busboy.on("finish", async () => {
-				try {
-					const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-					if (s3res.$metadata.httpStatusCode !== 200) {
-						reply.code(400).send({ message: "Failed to post image to s3" });
-					}
-					dataObj.avatarURL = process.env.BASE_S3_URL + bucketParams.Key;
-					const { avatarURL, id } = dataObj;
+			const something = new Promise((resolve, reject) => {
+				busboy.on("finish", async () => {
+					try {
+						const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+						if (s3res.$metadata.httpStatusCode !== 200) {
+							reply.code(400).send({ message: "Failed to post image to s3" });
+						}
+						dataObj.avatarURL = process.env.BASE_S3_URL + bucketParams.Key;
+						const { avatarURL } = dataObj;
+						const { id } = request.params;
 
-					if (!avatarURL) {
-						return { code: 400, message: "Missing values, please check input fields." };
-					}
+						if (!avatarURL) {
+							return { code: 400, message: "Missing values, please check input fields." };
+						}
 
-					const client = await fastify.pg.connect();
-					await client.query("UPDATE chefs SET avatar_url=$1 WHERE id=$2 RETURNING *;", [
-						avatarURL,
-						id,
-					]);
-					client.release();
-					reply.code(201).send({
-						code: 200,
-						message: `User ${id}'s avatar has been successfully been changed`,
-					});
-				} catch (err) {
-					console.log("Error", err);
-					reply.code(400).send({ message: "Error, something went wrong :( " });
-				}
+						const client = await fastify.pg.connect();
+						await client.query("UPDATE chefs SET avatar_url=$1 WHERE id=$2 RETURNING *;", [
+							avatarURL,
+							id,
+						]);
+						client.release();
+						reply.code(204).send({
+							code: 200,
+							message: `Chef's avatar has been successfully been changed`,
+						});
+						resolve();
+					} catch (err) {
+						console.log("Error", err);
+						reject();
+						reply.code(400).send({ message: "Error, something went wrong :( " });
+					}
+				});
 			});
+			await something;
 		}
 
 		async remove(request) {

@@ -25,58 +25,6 @@ module.exports = async function authenticateChefs(fastify) {
 		}
 	});
 
-	// fastify.post("/auth/chef-create", async (request, reply) => {
-	// 	const busboy = new Busboy({ headers: request.headers });
-	// 	request.raw.pipe(busboy);
-
-	// 	const bucketParams = { Bucket: "dashchef-dev" };
-	// 	const dataObj = {};
-
-	// 	busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-	// 		bucketParams.Key = crypto.randomBytes(20).toString("hex");
-	// 		bucketParams.ContentType = mimetype;
-
-	// 		const fileBuffers = [];
-	// 		file.on("data", (data) => fileBuffers.push(data));
-
-	// 		file.on("end", async () => {
-	// 			const file = Buffer.concat(fileBuffers);
-	// 			bucketParams.Body = file;
-	// 		});
-	// 	});
-
-	// 	busboy.on("field", (fieldname, val) => {
-	// 		dataObj[fieldname] = val;
-	// 	});
-
-	// 	busboy.on("finish", async () => {
-	// 		try {
-	// 			const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-	// 			if (s3res.$metadata.httpStatusCode !== 200) {
-	// 				reply.code(400).send({ message: "Failed to post image to s3" });
-	// 			}
-	// 			dataObj.avatarURL = process.env.BASE_S3_URL + bucketParams.Key;
-	// 			const { firstname, lastname, email, password, address, phone, avatarURL } = dataObj;
-
-	// 			if (!firstname || !lastname || !email || !password || !address || !phone) {
-	// 				return { code: 400, message: "Missing values, please check input fields." };
-	// 			}
-
-	// 			const hash = await bcrypt.hash(password, 10);
-	// 			const client = await fastify.pg.connect();
-	// 			await client.query(
-	// 				"INSERT INTO chefs (first_name, last_name, email, password, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *;",
-	// 				[firstname, lastname, email, hash, address, phone, avatarURL]
-	// 			);
-	// 			client.release();
-	// 			reply.code(201).send({ message: "User successful created!" });
-	// 		} catch (err) {
-	// 			console.log("Error", err);
-	// 			reply.code(400).send({ message: "Error, something went wrong :( " });
-	// 		}
-	// 	});
-	// });
-
 	fastify.post("/auth/chef/login", async (request, reply) => {
 		const { email, password } = request.body;
 

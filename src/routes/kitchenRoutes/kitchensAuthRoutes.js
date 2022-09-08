@@ -64,57 +64,6 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 	}
 
 	class KitchenService {
-		// async create(request, reply) {
-		// 	const busboy = new Busboy({ headers: request.headers });
-		// 	request.raw.pipe(busboy);
-
-		// 	const bucketParams = { Bucket: "dashchef-dev" };
-		// 	const dataObj = {};
-
-		// 	busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-		// 		bucketParams.Key = crypto.randomBytes(20).toString("hex");
-		// 		bucketParams.ContentType = mimetype;
-
-		// 		const fileBuffers = [];
-		// 		file.on("data", (data) => fileBuffers.push(data));
-
-		// 		file.on("end", async () => {
-		// 			const file = Buffer.concat(fileBuffers);
-		// 			bucketParams.Body = file;
-		// 		});
-		// 	});
-
-		// 	busboy.on("field", (fieldname, val) => {
-		// 		dataObj[fieldname] = val;
-		// 	});
-
-		// 	let postedKitchen = [];
-		// 	busboy.on("finish", async () => {
-		// 		try {
-		// 			const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-		// 			if (s3res.$metadata.httpStatusCode !== 200) {
-		// 				reply.code(400).send({ message: "Failed to post image to s3" });
-		// 			}
-		// 			dataObj.avatarURL = process.env.BASE_S3_URL + bucketParams.Key;
-		// 			const { name, email, address, phone, avatarURL } = dataObj;
-		// 			console.log(dataObj);
-		// 			const chef = fastify.jwt.decode(request.raw.headers.auth);
-		// 			const client = await fastify.pg.connect();
-		// 			const { rows } = await client.query(
-		// 				"INSERT INTO kitchens (name, email, address, phone, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
-		// 				[name, email, address, phone, avatarURL]
-		// 			);
-		// 			await client.query("UPDATE chefs SET kitchen_id=$1 WHERE id=$2", [rows[0].id, chef.id]);
-		// 			client.release();
-		// 			postedKitchen = [...rows];
-		// 			reply.code(201).send({ message: "Kitchen successfully created!", postedKitchen });
-		// 		} catch (err) {
-		// 			console.log("Error", err);
-		// 			reply.code(400).send({ message: "Error, something went wrong :( " });
-		// 		}
-		// 	});
-		// }
-
 		async create(request) {
 			const { name, email, address, phone } = request.body;
 
@@ -147,12 +96,11 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			return { code: 200, message: `Kitchen with id ${id} has been updated`, rows };
 		}
 
-		async editAvatar(request) {
+		async editAvatar(request, reply) {
 			const busboy = new Busboy({ headers: request.headers });
 			request.raw.pipe(busboy);
 
 			const bucketParams = { Bucket: "dashchef-dev" };
-			const dataObj = {};
 
 			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
 				bucketParams.Key = crypto.randomBytes(20).toString("hex");
@@ -167,11 +115,11 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 				});
 			});
 
+			const dataObj = {};
 			busboy.on("field", (fieldname, val) => {
 				dataObj[fieldname] = val;
 			});
 
-			const updatedAvatar = [];
 			const something = new Promise((resolve, reject) => {
 				busboy.on("finish", async () => {
 					try {
@@ -180,20 +128,22 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 							reply.code(400).send({ message: "Failed to post image to s3" });
 						}
 						dataObj.avatarURL = process.env.BASE_S3_URL + bucketParams.Key;
-						const { avatarURL, id } = dataObj;
+						const { avatarURL } = dataObj;
+						const { id } = request.params;
 
 						if (!avatarURL || !id) {
 							return { code: 400, message: "Missing values, please check input fields." };
 						}
 
 						const client = await fastify.pg.connect();
-						await client.query("UPDATE kitchens SET avatar_url=$1, WHERE id=$2 RETURNING *;", [
+						await client.query("UPDATE kitchens SET avatar_url=$1 WHERE id=$2 RETURNING *;", [
 							avatarURL,
 							id,
 						]);
-						updatedAvatar = [...rows];
 						client.release();
-						reply.code(200).send({ code: 200, message: "User successful created!", updatedAvatar });
+						reply
+							.code(204)
+							.send({ code: 200, message: "Chef successfully updated kitchen avatar" });
 						resolve();
 					} catch (err) {
 						console.log("Error", err);
@@ -210,7 +160,6 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 			request.raw.pipe(busboy);
 
 			const bucketParams = { Bucket: "dashchef-dev" };
-			const dataObj = {};
 
 			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
 				bucketParams.Key = crypto.randomBytes(20).toString("hex");
@@ -225,11 +174,11 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 				});
 			});
 
+			const dataObj = {};
 			busboy.on("field", (fieldname, val) => {
 				dataObj[fieldname] = val;
 			});
 
-			const updatedBanner = [];
 			const something = new Promise((resolve, reject) => {
 				busboy.on("finish", async () => {
 					try {
@@ -238,20 +187,23 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 							reply.code(400).send({ message: "Failed to post image to s3" });
 						}
 						dataObj.bannerURL = process.env.BASE_S3_URL + bucketParams.Key;
-						const { bannerURL, id } = dataObj;
+						console.log("data object ===>", dataObj);
+						const { bannerURL } = dataObj;
+						const { id } = request.params;
 
 						if (!bannerURL || !id) {
 							return { code: 400, message: "Missing values, please check input fields." };
 						}
 
 						const client = await fastify.pg.connect();
-						await client.query("UPDATE kitchens SET banner_url=$1, WHERE id=$2 RETURNING *;", [
+						await client.query("UPDATE kitchens SET banner_url=$1 WHERE id=$2 RETURNING *;", [
 							bannerURL,
 							id,
 						]);
-						updatedBanner = [...rows];
 						client.release();
-						reply.code(200).send({ code: 200, message: "User successful created!", updatedBanner });
+						reply
+							.code(204)
+							.send({ code: 200, message: "Chef successfully updated kitchen banner" });
 						resolve();
 					} catch (err) {
 						console.log("Error", err);

@@ -19,7 +19,6 @@ async function chefsRequireAuthentication(fastify) {
 				client.release();
 				const passwordMatch = await bcrypt.compare(password, rows[0].password);
 				if (passwordMatch) {
-					console.log("Chef has been validated and password matched");
 					return done();
 				}
 			} catch (error) {

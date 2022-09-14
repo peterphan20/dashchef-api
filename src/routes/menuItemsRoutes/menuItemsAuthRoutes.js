@@ -49,7 +49,6 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 			request.raw.pipe(busboy);
 
 			const bucketParams = { Bucket: "dashchef-dev" };
-			const dataObj = {};
 
 			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
 				bucketParams.Key = crypto.randomBytes(20).toString("hex");
@@ -64,6 +63,7 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 				});
 			});
 
+			const dataObj = {};
 			busboy.on("field", (fieldname, val) => {
 				dataObj[fieldname] = val;
 			});
@@ -77,15 +77,15 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 							reply.code(400).send({ message: "Failed to post image to s3" });
 						}
 						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-						const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
+						const { name, id, description, price, photoPrimaryURL } = dataObj;
 						// const formattedTags = `(${tags
 						// 	.map((tag) => JSON.stringify(tag.toString()))
 						// 	.join(", ")})`;
-						const formattedTags = `("${tags.join('", "')})`;
+						// const formattedTags = `("${tags.join('", "')})`;
 						const client = await fastify.pg.connect();
 						const { rows } = await client.query(
-							"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, tags) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
-							[name, id, description, price, photoPrimaryURL, formattedTags]
+							"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
+							[name, id, description, price, photoPrimaryURL]
 						);
 						client.release();
 						postedMenuItem = [...rows];
@@ -106,61 +106,15 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 		}
 
 		async edit(request) {
-			const busboy = new Busboy({ headers: request.headers });
-			request.raw.pipe(busboy);
-
-			const bucketParams = { Bucket: "dashchef-dev" };
-			const dataObj = {};
-
-			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-				bucketParams.Key = crypto.randomBytes(20).toString("hex");
-				bucketParams.ContentType = mimetype;
-
-				const fileBuffers = [];
-				file.on("data", (data) => fileBuffers.push(data));
-
-				file.on("end", async () => {
-					const file = Buffer.concat(fileBuffers);
-					bucketParams.Body = file;
-				});
-			});
-
-			busboy.on("field", (fieldname, val) => {
-				dataObj[fieldname] = val;
-			});
-
-			let updatedMenuItem = [];
-			const something = new Promise((resolve, reject) => {
-				busboy.on("finish", async () => {
-					try {
-						const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-						if (s3res.$metadata.httpStatusCode !== 200) {
-							reply.code(400).send({ message: "Failed to post image to s3" });
-						}
-						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-						const { name, description, price, photoPrimaryURL, galleryPhotoURL, tags } = dataObj;
-						const { id } = request.params;
-						const client = await fastify.pg.connect();
-						const { rows } = await client.query(
-							"UPDATE menu_items SET name=$1, description=$2, price=$3, photo_primary_url=$4 gallery_photo_urls=$5 tags=$6 WHERE id=$7 RETURNING *;",
-							[name, description, price, photoPrimaryURL, galleryPhotoURL, tags, id]
-						);
-						client.release();
-						updatedMenuItem = [...rows];
-						reply.code(200).send({
-							code: 200,
-							message: `Menu item with id ${id} has been updated`,
-							updatedMenuItem,
-						});
-						resolve();
-					} catch (err) {
-						console.log("Error", err);
-						reject();
-						reply.code(400).send({ message: "Error, something went wrong :( " });
-					}
-				});
-			});
-			await something;
+			const { name, description, price, tags } = request.body;
+			const { id } = request.params;
+			const client = await fastify.pg.connect();
+			const { rows } = await client.query(
+				"UPDATE menu_items SET name=$1, description=$2, price=$3, tags=$4 WHERE id=$5 RETURNING *;",
+				[name, description, price, tags, id]
+			);
+			client.release();
+			return { code: 200, message: `Menu item with id ${id} has been updated`, rows };
 		}
 
 		async remove(request) {

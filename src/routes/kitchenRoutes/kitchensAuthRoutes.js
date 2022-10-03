@@ -132,7 +132,7 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 						]);
 						client.release();
 						reply
-							.code(201)
+							.code(204)
 							.send({ code: 200, message: "Chef successfully updated kitchen avatar" });
 						resolve();
 					} catch (err) {
@@ -154,63 +154,3 @@ module.exports = async function kitchensAuthRoutes(fastify) {
 		}
 	}
 };
-
-// async editBanner(request, reply) {
-// 	const busboy = new Busboy({ headers: request.headers });
-// 	request.raw.pipe(busboy);
-
-// 	const bucketParams = { Bucket: "dashchef-dev" };
-
-// 	busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
-// 		bucketParams.Key = crypto.randomBytes(20).toString("hex");
-// 		bucketParams.ContentType = mimetype;
-
-// 		const fileBuffers = [];
-// 		file.on("data", (data) => fileBuffers.push(data));
-
-// 		file.on("end", async () => {
-// 			const file = Buffer.concat(fileBuffers);
-// 			bucketParams.Body = file;
-// 		});
-// 	});
-
-// 	const dataObj = {};
-// 	busboy.on("field", (fieldname, val) => {
-// 		dataObj[fieldname] = val;
-// 	});
-
-// 	const something = new Promise((resolve, reject) => {
-// 		busboy.on("finish", async () => {
-// 			try {
-// 				const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
-// 				if (s3res.$metadata.httpStatusCode !== 200) {
-// 					reply.code(400).send({ message: "Failed to post image to s3" });
-// 				}
-// 				dataObj.bannerURL = process.env.BASE_S3_URL + bucketParams.Key;
-// 				console.log("data object ===>", dataObj);
-// 				const { bannerURL } = dataObj;
-// 				const { id } = request.params;
-
-// 				if (!bannerURL || !id) {
-// 					return { code: 400, message: "Missing values, please check input fields." };
-// 				}
-
-// 				const client = await fastify.pg.connect();
-// 				await client.query("UPDATE kitchens SET banner_url=$1 WHERE id=$2 RETURNING *;", [
-// 					bannerURL,
-// 					id,
-// 				]);
-// 				client.release();
-// 				reply
-// 					.code(204)
-// 					.send({ code: 200, message: "Chef successfully updated kitchen banner" });
-// 				resolve();
-// 			} catch (err) {
-// 				console.log("Error", err);
-// 				reject();
-// 				reply.code(400).send({ message: "Error, something went wrong :( " });
-// 			}
-// 		});
-// 	});
-// 	await something;
-// }

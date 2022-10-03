@@ -1,9 +1,5 @@
 const chefsRequireAuthentication = require("../../plugins/chefsAuthenticator");
 const verifyPostOwnership = require("../../plugins/postOwnership");
-const { s3Client } = require("../../helpers/s3Client");
-const { PutObjectCommand } = require("@aws-sdk/client-s3");
-const Busboy = require("busboy");
-var crypto = require("crypto");
 
 module.exports = async function postsChefsAuthRoutes(fastify) {
 	fastify.register(require("fastify-auth"));

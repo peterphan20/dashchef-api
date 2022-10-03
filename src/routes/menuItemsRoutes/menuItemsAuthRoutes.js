@@ -33,6 +33,16 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 		});
 
 		fastify.route({
+			method: "PUT",
+			url: "/kitchen/item-image-update/:id",
+			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyMenuItemOwnership], {
+				run: "all",
+				relation: "and",
+			}),
+			handler: itemService.editItemImage,
+		});
+
+		fastify.route({
 			method: "DELETE",
 			url: "/kitchen/item-delete/:id",
 			preHandler: fastify.auth([fastify.verifyJWT, fastify.verifyMenuItemOwnership], {
@@ -77,15 +87,17 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 							reply.code(400).send({ message: "Failed to post image to s3" });
 						}
 						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
-						const { name, id, description, price, photoPrimaryURL } = dataObj;
-						// const formattedTags = `(${tags
-						// 	.map((tag) => JSON.stringify(tag.toString()))
-						// 	.join(", ")})`;
-						// const formattedTags = `("${tags.join('", "')})`;
+						const { name, id, description, price, photoPrimaryURL, tags } = dataObj;
+						const formatTags = (arr) => {
+							return `{${arr
+								.split(",")
+								.map((v) => JSON.stringify(v.toString()))
+								.join(",")}}`;
+						};
 						const client = await fastify.pg.connect();
 						const { rows } = await client.query(
-							"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url) VALUES ($1, $2, $3, $4, $5) RETURNING *;",
-							[name, id, description, price, photoPrimaryURL]
+							"INSERT INTO menu_items (name, kitchen_id, description, price, photo_primary_url, tags) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *;",
+							[name, id, description, price, photoPrimaryURL, formatTags(tags)]
 						);
 						client.release();
 						postedMenuItem = [...rows];
@@ -115,6 +127,62 @@ module.exports = async function menuItemsAuthRoutes(fastify) {
 			);
 			client.release();
 			return { code: 200, message: `Menu item with id ${id} has been updated`, rows };
+		}
+
+		async editItemImage(request, reply) {
+			const busboy = new Busboy({ headers: request.headers });
+			request.raw.pipe(busboy);
+
+			const bucketParams = { Bucket: "dashchef-dev" };
+
+			busboy.on("file", (fieldname, file, filename, encoding, mimetype) => {
+				bucketParams.Key = crypto.randomBytes(20).toString("hex");
+				bucketParams.ContentType = mimetype;
+
+				const fileBuffers = [];
+				file.on("data", (data) => fileBuffers.push(data));
+
+				file.on("end", async () => {
+					const file = Buffer.concat(fileBuffers);
+					bucketParams.Body = file;
+				});
+			});
+
+			const dataObj = {};
+			busboy.on("field", (fieldname, val) => {
+				dataObj[fieldname] = val;
+			});
+
+			const something = new Promise((resolve, reject) => {
+				busboy.on("finish", async () => {
+					try {
+						const s3res = await s3Client.send(new PutObjectCommand(bucketParams));
+						if (s3res.$metadata.httpStatusCode !== 200) {
+							reply.code(400).send({ message: "Failed to post image to s3" });
+						}
+						dataObj.photoPrimaryURL = process.env.BASE_S3_URL + bucketParams.Key;
+						const { photoPrimaryURL } = dataObj;
+						const { id } = request.params;
+						const client = await fastify.pg.connect();
+						const { rows } = await client.query(
+							"UPDATE menu_items SET photo_primary_url=$1 WHERE id=$2 RETURNING *;",
+							[photoPrimaryURL, id]
+						);
+						client.release();
+						reply.code(204).send({
+							code: 200,
+							message: `Menu item image with id ${id} has been updated`,
+							rows,
+						});
+						resolve();
+					} catch (err) {
+						console.log("Error", err);
+						reject();
+						reply.code(400).send({ message: "Error, something went wrong :( " });
+					}
+				});
+			});
+			await something;
 		}
 
 		async remove(request) {
